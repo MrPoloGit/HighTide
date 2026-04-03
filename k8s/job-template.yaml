@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __JOB_NAME__
+  namespace: vlsida
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      initContainers:
+      - name: clone-repo
+        image: alpine/git
+        args:
+        - clone
+        - --single-branch
+        - --branch
+        - __BRANCH__
+        - --depth=1
+        - https://github.com/VLSIDA/HighTide.git
+        - /repo
+        volumeMounts:
+        - name: repo
+          mountPath: /repo
+      containers:
+      - name: build
+        image: ubuntu:24.04
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -euo pipefail
+
+          # Install dependencies
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            curl perl git ca-certificates python3 gcc g++ >/dev/null 2>&1
+
+          # Install bazelisk as bazel
+          curl -fsSL -o /usr/local/bin/bazel \
+            https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+          chmod +x /usr/local/bin/bazel
+
+          cd /repo
+
+          # Build the design with remote cache upload enabled
+          bazel build \
+            --remote_cache=https://storage.googleapis.com/hightide-bazel-cache \
+            --remote_upload_local_results=true \
+            --google_credentials=/secrets/gcs/key.json \
+            __BAZEL_TARGET__
+        volumeMounts:
+        - name: repo
+          mountPath: /repo
+        - name: gcs-key
+          mountPath: /secrets/gcs
+          readOnly: true
+        resources:
+          requests:
+            memory: __MEM_REQUEST__
+            cpu: __CPU_REQUEST__
+          limits:
+            memory: __MEM_LIMIT__
+            cpu: __CPU_LIMIT__
+      volumes:
+      - name: repo
+        emptyDir: {}
+      - name: gcs-key
+        secret:
+          secretName: gcs-bazel-cache
+      restartPolicy: Never

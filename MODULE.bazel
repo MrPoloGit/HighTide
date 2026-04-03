@@ -12,8 +12,16 @@ python.toolchain(python_version = "3.13", is_default = True)
 git_override(
     module_name = "bazel-orfs",
     remote = "https://github.com/The-OpenROAD-Project/bazel-orfs.git",
-    # Latest commit before bazel-orfs-verilog dependency was added.
-    commit = "2d83bbbc661843c43d8c24cecf19f0c1511d1823",
+    commit = "d998bbff78c455718bd1a0191b4aa89ef9addac1",
+)
+
+bazel_dep(name = "bazel-orfs-verilog")
+
+git_override(
+    module_name = "bazel-orfs-verilog",
+    remote = "https://github.com/The-OpenROAD-Project/bazel-orfs.git",
+    commit = "d998bbff78c455718bd1a0191b4aa89ef9addac1",
+    strip_prefix = "verilog",
 )
 
 orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")
@@ -21,6 +29,7 @@ orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")
 # Docker image must match the bazel-orfs commit and the ORFS submodule.
 orfs.default(
     image = "docker.io/openroad/orfs:26Q1-656-g97416b2e4",
+    sha256 = "9c90633d62e08f0b3772d4fdfc06b14e4f33273ae1511d1c41d3c48560adb9a5",
 )
 
 use_repo(orfs, "docker_orfs")
