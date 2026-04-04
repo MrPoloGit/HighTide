@@ -12,3 +12,5 @@ sv2v
 bazel-*
 MODULE.bazel.lock
 .bazelrc.user
+google-cloud-sdk/
+google-cloud-cli-*.tar.gz

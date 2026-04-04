@@ -25,7 +25,7 @@ TEMPLATE="$SCRIPT_DIR/job-template.yaml"
 NAMESPACE="vlsida"
 
 # Defaults
-BRANCH="k8s"
+BRANCH="main"
 CPU_REQUEST="8"
 CPU_LIMIT="16"
 MEM_REQUEST="32Gi"

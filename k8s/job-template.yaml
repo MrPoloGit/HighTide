@@ -4,6 +4,7 @@ metadata:
   name: __JOB_NAME__
   namespace: vlsida
 spec:
+  ttlSecondsAfterFinished: 3600
   backoffLimit: 1
   template:
     spec:
