@@ -152,8 +152,9 @@ echo ""
 for entry in "${DESIGNS[@]}"; do
     IFS='|' read -r platform name relpath target <<< "$entry"
 
-    # Create a DNS-safe job name (lowercase, alphanumeric + dashes, max 63 chars)
-    job_name="hightide-${platform}-${name}"
+    # Create a DNS-safe job name using the leaf directory name
+    leaf_name="${relpath##*/}"
+    job_name="hightide-${platform}-${leaf_name}"
     job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
 
     # Generate YAML from template

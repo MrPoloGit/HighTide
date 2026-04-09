@@ -24,12 +24,18 @@ spec:
           mountPath: /repo
       containers:
       - name: build
-        image: docker.io/openroad/orfs:26Q1-656-g97416b2e4
+        image: ubuntu:24.04
         command:
         - /bin/bash
         - -c
         - |
           set -euo pipefail
+
+          # Install dependencies: curl for bazelisk, git for bazel-orfs fetch,
+          # build-essential for Bazel CC toolchain, python3/time for ORFS flow scripts
+          apt-get update -qq && apt-get install -y -qq \
+            curl git build-essential time \
+            python3 python3-yaml python3-numpy >/dev/null 2>&1
 
           # Install bazelisk as bazel
           curl -fsSL -o /usr/local/bin/bazel \
@@ -41,7 +47,10 @@ spec:
           # Build the design with remote cache (upload if credentials available)
           CACHE_FLAGS="--remote_cache=https://storage.googleapis.com/hightide-bazel-cache"
           if [ -f /secrets/gcs/key.json ]; then
+            echo "GCS credentials found, enabling cache upload"
             CACHE_FLAGS="$CACHE_FLAGS --remote_upload_local_results=true --google_credentials=/secrets/gcs/key.json"
+          else
+            echo "WARNING: GCS credentials not found, cache is read-only"
           fi
 
           bazel build $CACHE_FLAGS __BAZEL_TARGET__
