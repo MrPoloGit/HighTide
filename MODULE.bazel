@@ -65,18 +65,17 @@ git_override(
 
 # --- yosys + plugins (slang) extracted from the ORFS Docker image ---
 # The BCR yosys package doesn't ship the slang plugin that bp_processor
-# needs. We re-run the same OCI extraction docker_pkg rule with a
-# custom BUILD file that exposes yosys, yosys-abc, and yosys_share
-# (including plugins/slang.so) from the image. Bazel's repository
-# cache dedupes the layer downloads with @docker_orfs_image.
+# needs. We re-run bazel-orfs's docker_pkg rule with a custom BUILD
+# file exposing yosys, yosys-abc, and yosys_share (including
+# plugins/slang.so) from the image, then route orfs.default() at the
+# extracted binaries. Bazel's content-addressed repository cache
+# dedupes the layer downloads with @docker_orfs_image.
 #
-# TEMPORARY: upstream bazel-orfs (ideas/toolchains.md on main) is
-# retiring @docker_orfs / image extraction in favor of a prebuilt
-# bazel-orfs-yosys toolchain submodule that bundles slang. When that
-# ships, drop docker_yosys.BUILD.bazel and the docker_pkg call below,
-# and replace the yosys/yosys_abc/yosys_share overrides in
-# orfs.default() with the new toolchain extension. See
-# https://github.com/The-OpenROAD-Project/bazel-orfs/blob/main/ideas/toolchains.md
+# This is the intended downstream extensibility pattern — bazel-orfs
+# supports pointing at user-supplied docker-extracted binaries as a
+# first-class use case. The retirement of @docker_orfs described in
+# bazel-orfs/ideas/toolchains.md applies to bazel-orfs's own internal
+# default path, not to the orfs.default(yosys=...) override below.
 bazel_dep(name = "yosys", version = "0.62")
 single_version_override(
     module_name = "yosys",
