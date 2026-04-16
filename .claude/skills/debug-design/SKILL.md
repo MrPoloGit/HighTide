@@ -12,23 +12,47 @@ You are debugging the design at `designs/$0`. The user may have specified a stag
 
 ## Step 1: Locate Build Artifacts
 
-Determine which build flow was used and find the outputs.
+Check for artifacts in three locations, in order of preference:
 
-**Bazel flow** — artifacts under `bazel-bin/designs/$0/`:
+### 1a. Local Bazel artifacts
+
 ```bash
 ls bazel-bin/designs/$0/results/*/base/*.odb 2>/dev/null
 ls bazel-bin/designs/$0/logs/*/base/*.log 2>/dev/null
 ls bazel-bin/designs/$0/logs/*/base/6_report.json 2>/dev/null
 ```
 
-**Make flow** — artifacts at `{logs,objects,reports,results}/<platform>/<design>/base/`:
+### 1b. Previously fetched artifacts
+
+Artifacts downloaded from the Nautilus PVC are stored at `artifacts/<platform>/<design>/`:
 ```bash
-# Parse platform and design from argument (e.g., "asap7/minimax")
-ls results/<platform>/<design>/base/*.odb 2>/dev/null
-ls logs/<platform>/<design>/base/*.log 2>/dev/null
+ls artifacts/$0/results/*/base/*.odb 2>/dev/null
+ls artifacts/$0/logs/*/base/*.log 2>/dev/null
+ls artifacts/$0/logs/*/base/6_report.json 2>/dev/null
 ```
 
-Identify the **last completed stage** (1_synth, 2_floorplan, 3_place, 4_cts, 5_route, 6_final) and the **first failed stage** by checking which .odb files exist.
+### 1c. Fetch from Nautilus PVC
+
+If no local artifacts exist, the design may have been built on the Nautilus NRP cluster (via `./k8s/run.sh --upload-artifacts`). Fetch the artifacts:
+
+```bash
+./tools/fetch_artifacts.sh --keep <platform> <design>
+```
+
+This downloads results, reports, and logs from the `hightide-artifacts` PVC to `artifacts/<platform>/<design>/`. Use `--keep` to preserve the remote copy for other users. Without `--keep`, remote artifacts are deleted after fetch.
+
+Other fetch options:
+```bash
+./tools/fetch_artifacts.sh --keep <platform>          # all designs for a platform
+./tools/fetch_artifacts.sh --keep                     # all designs, all platforms
+./tools/fetch_artifacts.sh --keep --design <design>   # one design, all platforms
+```
+
+### 1d. Determine build status
+
+Identify the **last completed stage** (1_synth, 2_floorplan, 3_place, 4_cts, 5_route, 6_final) and the **first failed stage** by checking which .odb files exist. Check whichever artifact location has the files (bazel-bin or artifacts directory).
+
+**Artifact path convention:** Throughout this skill, paths like `logs/<platform>/<design>/base/` refer to whichever artifact location has the files. Check in order: `bazel-bin/designs/$0/`, then `artifacts/$0/`. Use the one that exists.
 
 ## Step 2: Read the Design Configuration
 
@@ -48,12 +72,10 @@ Based on the failed stage and symptoms, follow the appropriate diagnosis path be
 
 ### A. Synthesis Failures (Stage 1)
 
-**Read the synthesis log:**
+**Read the synthesis log** (check bazel-bin or artifacts directory, whichever has the files):
 ```bash
-# Make flow
-tail -200 logs/<platform>/<design>/base/1_1_yosys.log
-# Bazel flow
-tail -200 bazel-bin/designs/$0/logs/*/base/1_1_yosys.log
+tail -200 bazel-bin/designs/$0/logs/*/base/1_1_yosys.log 2>/dev/null
+tail -200 artifacts/$0/logs/*/base/1_1_yosys.log 2>/dev/null
 ```
 
 **Common synthesis issues:**
@@ -240,14 +262,12 @@ For visual diagnosis of floorplan, placement, congestion, and power routing prob
 DOCKER_IMAGE=$(grep -oP 'image\s*=\s*"\K[^"]+' MODULE.bazel)
 ```
 
-**Determine the ODB file path** for the stage to visualize:
-- Floorplan: `results/<platform>/<design>/base/2_floorplan.odb`
-- Placement: `results/<platform>/<design>/base/3_place.odb`
-- CTS: `results/<platform>/<design>/base/4_cts.odb`
-- Routing: `results/<platform>/<design>/base/5_route.odb`
-- Final: `results/<platform>/<design>/base/6_final.odb`
-
-For Bazel flow, ODB files are at: `bazel-bin/designs/$0/results/*/base/<stage>.odb`
+**Determine the ODB file path** for the stage to visualize (check `bazel-bin/designs/$0/` or `artifacts/$0/`):
+- Floorplan: `results/*/base/2_floorplan.odb`
+- Placement: `results/*/base/3_place.odb`
+- CTS: `results/*/base/4_cts.odb`
+- Routing: `results/*/base/5_route.odb`
+- Final: `results/*/base/6_final.odb`
 
 ### Basic layout image
 
