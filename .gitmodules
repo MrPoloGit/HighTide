@@ -25,3 +25,7 @@
 [submodule "designs/src/sha3/dev/repo"]
 	path = designs/src/sha3/dev/repo
 	url = https://github.com/ucb-bar/sha3
+[submodule "designs/src/NVDLA/dev/repo"]
+	path = designs/src/NVDLA/dev/repo
+	url = https://github.com/nvdla/hw.git
+	branch = nv_small
