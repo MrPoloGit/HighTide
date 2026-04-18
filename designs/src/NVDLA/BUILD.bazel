@@ -16,7 +16,10 @@
 
 filegroup(
     name = "include",
-    srcs = glob(["vmod/include/*.vh"]),
+    srcs = glob([
+        "vmod/include/*.vh",
+        "vmod/vlibs/*.vh",
+    ]),
     visibility = ["//visibility:public"],
 )
 
