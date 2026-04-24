@@ -31,6 +31,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           items=$(wc -l < audit_upstream_items.ndjson | awk '{print $1}')
           echo "items=${items:-0}" >> "$GITHUB_OUTPUT"
+          # Ensure the upstream-update label exists so phase-2 doesn't spend
+          # turns creating it.
+          gh label create upstream-update \
+            --color A0DCFB --description "Pinned submodule is behind upstream" \
+            2>/dev/null || true
 
       - name: Classify changes and file issues (Claude)
         if: steps.audit.outputs.items != '0'
@@ -64,7 +69,7 @@ jobs:
 
             Keep per-item work bounded: a few gh api calls each.  Do not
             clone repos, regenerate RTL, open PRs, or modify any files.
-          claude_args: "--max-turns 20"
+          claude_args: "--max-turns 60"
 
       - name: Upload audit artifacts
         if: always()
