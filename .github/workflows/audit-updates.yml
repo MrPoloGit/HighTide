@@ -5,6 +5,12 @@ on:
   schedule:
     - cron: "0 9 * * 1"  # Every Monday at 9 AM
 
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+  issues: write
+
 jobs:
   audit-updates:
     runs-on: ubuntu-latest

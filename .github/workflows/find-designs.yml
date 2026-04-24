@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: "0 9 * * 1"  # Every Monday at 9 AM
 
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
 jobs:
   find-designs:
     runs-on: ubuntu-latest
