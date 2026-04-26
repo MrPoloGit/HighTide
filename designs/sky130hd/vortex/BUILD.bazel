@@ -21,7 +21,8 @@ _INCLUDE_DIRS = VORTEX_INCLUDE_DIRS_RELEASE_STR + " " + VORTEX_INCLUDE_DIRS_DEV_
 #   - clock period 1100 ps -> 8.0 ns (~7x, calibrated against minimax
 #     400 ps -> 4 ns and lfsr 108 ps -> 1.1 ns)
 #   - utilization eased from 50 -> 30 for the 130 nm node
-#   - macro halo set to 30 30 to match liteeth-style sky130hd designs
+#   - macro halo grown to 60 60 to relieve memory-pin-access congestion
+#     (initial 30 30 left rdata/gpr_ram fan-out routing local hot-spots)
 hightide_design(
     name = "vortex",
     platform = "sky130hd",
@@ -39,7 +40,7 @@ hightide_design(
         "VERILOG_INCLUDE_DIRS": _INCLUDE_DIRS,
         "CORE_UTILIZATION": "30",
         "PLACE_DENSITY_LB_ADDON": "0.20",
-        "MACRO_PLACE_HALO": "30 30",
+        "MACRO_PLACE_HALO": "60 60",
         "TNS_END_PERCENT": "100",
     },
     stage_data = {"synth": ["//designs/src/vortex:rtl_data"]},
