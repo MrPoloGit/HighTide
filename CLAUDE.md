@@ -128,8 +128,8 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 | Platform | Node | Designs |
 |----------|------|---------|
 | asap7 | 7nm academic | gemmini, minimax, cnn, sha3, lfsr, NyuziProcessor, bp_processor/bp_uno/bp_quad, liteeth (6 variants), snitch_cluster, floonoc |
-| nangate45 | 45nm | minimax, lfsr, NyuziProcessor, liteeth (6 variants) |
-| sky130hd | 130nm open | minimax, lfsr, sha3, liteeth (6 variants) |
+| nangate45 | 45nm | minimax, lfsr, NyuziProcessor, cnn, liteeth (6 variants) |
+| sky130hd | 130nm open | minimax, lfsr, sha3, cnn, liteeth (6 variants) |
 
 ### Output Directories
 
@@ -151,7 +151,8 @@ SRAM LEF/LIB files are organized per-platform:
 - `designs/<platform>/NyuziProcessor/sram/{lef,lib}/` — NyuziProcessor memories
 - `designs/<platform>/liteeth/sram/{lef,lib}/` — liteeth variant memories (shared across variants)
 - `designs/asap7/bp_processor/sram/{lef,lib}/` — bp_processor memories
-- `designs/src/cnn/fakeram_*.{lef,lib}` — CNN memories (in source directory)
+- `designs/src/cnn/fakeram_*.{lef,lib}` — CNN asap7 memories (shared with src dir)
+- `designs/{nangate45,sky130hd}/cnn/sram/{lef,lib}/` — CNN per-platform synthetic FakeRAMs (regenerable via `designs/src/cnn/dev/gen_fakeram_{nangate45,sky130hd}.py`)
 
 ## Shared Machine
 
