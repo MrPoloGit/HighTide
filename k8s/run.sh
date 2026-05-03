@@ -30,9 +30,9 @@ NAMESPACE="vlsida"
 
 # Defaults
 BRANCH="main"
-CPU_REQUEST="8"
+CPU_REQUEST="4"
 CPU_LIMIT="16"
-MEM_REQUEST="64Gi"
+MEM_REQUEST="32Gi"
 MEM_LIMIT="128Gi"
 DRY_RUN=false
 MODE="submit"
@@ -42,31 +42,58 @@ FILTER_DESIGN=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --branch)   BRANCH="$2"; shift 2 ;;
-        --cpu)      CPU_REQUEST="$2"; CPU_LIMIT="$((${2} * 2))"; shift 2 ;;
-        --mem)      MEM_REQUEST="$2"; MEM_LIMIT="${2%Gi}"; MEM_LIMIT="$((MEM_LIMIT * 2))Gi"; shift 2 ;;
-        --upload-artifacts) UPLOAD_ARTIFACTS=true; shift ;;
-        --dry-run)  DRY_RUN=true; shift ;;
-        --status)   MODE="status"; shift ;;
-        --delete)   MODE="delete"; shift ;;
-        --design)   FILTER_DESIGN="$2"; shift 2 ;;
-        -h|--help)
-            sed -n '2,/^$/s/^# //p' "$0"
-            exit 0
-            ;;
-        *)
-            if [[ -z "$FILTER_PLATFORM" ]]; then
-                FILTER_PLATFORM="$1"
-            elif [[ -z "$FILTER_DESIGN" ]]; then
-                FILTER_DESIGN="$1"
-            else
-                echo "ERROR: unexpected argument: $1" >&2
-                exit 1
-            fi
-            shift
-            ;;
-    esac
+  case "$1" in
+  --branch)
+    BRANCH="$2"
+    shift 2
+    ;;
+  --cpu)
+    CPU_REQUEST="$2"
+    CPU_LIMIT="$((${2} * 2))"
+    shift 2
+    ;;
+  --mem)
+    MEM_REQUEST="$2"
+    MEM_LIMIT="${2%Gi}"
+    MEM_LIMIT="$((MEM_LIMIT * 2))Gi"
+    shift 2
+    ;;
+  --upload-artifacts)
+    UPLOAD_ARTIFACTS=true
+    shift
+    ;;
+  --dry-run)
+    DRY_RUN=true
+    shift
+    ;;
+  --status)
+    MODE="status"
+    shift
+    ;;
+  --delete)
+    MODE="delete"
+    shift
+    ;;
+  --design)
+    FILTER_DESIGN="$2"
+    shift 2
+    ;;
+  -h | --help)
+    sed -n '2,/^$/s/^# //p' "$0"
+    exit 0
+    ;;
+  *)
+    if [[ -z "$FILTER_PLATFORM" ]]; then
+      FILTER_PLATFORM="$1"
+    elif [[ -z "$FILTER_DESIGN" ]]; then
+      FILTER_DESIGN="$1"
+    else
+      echo "ERROR: unexpected argument: $1" >&2
+      exit 1
+    fi
+    shift
+    ;;
+  esac
 done
 
 # User label for filtering (only show/delete your own jobs)
@@ -74,121 +101,121 @@ USER_LABEL=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
 
 # Handle status/delete modes
 if [[ "$MODE" == "status" ]]; then
-    echo "Jobs in namespace $NAMESPACE (user: $USER_LABEL):"
-    kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
-        -o custom-columns='NAME:.metadata.name,STATUS:.status.conditions[0].type,COMPLETIONS:.status.succeeded,FAILURES:.status.failed,AGE:.metadata.creationTimestamp' \
-        2>/dev/null || kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
-    echo ""
-    echo "Pods:"
-    kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
-        -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName' \
-        2>/dev/null || kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
-    exit 0
+  echo "Jobs in namespace $NAMESPACE (user: $USER_LABEL):"
+  kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
+    -o custom-columns='NAME:.metadata.name,STATUS:.status.conditions[0].type,COMPLETIONS:.status.succeeded,FAILURES:.status.failed,AGE:.metadata.creationTimestamp' \
+    2>/dev/null || kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
+  echo ""
+  echo "Pods:"
+  kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
+    -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName' \
+    2>/dev/null || kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
+  exit 0
 fi
 
 if [[ "$MODE" == "delete" ]]; then
-    LABEL_SELECTOR="app=hightide,user=$USER_LABEL"
-    DESC="all"
-    if [[ -n "$FILTER_PLATFORM" ]]; then
-        LABEL_SELECTOR="$LABEL_SELECTOR,platform=$FILTER_PLATFORM"
-        DESC="$FILTER_PLATFORM"
-    fi
-    if [[ -n "$FILTER_DESIGN" ]]; then
-        design_label=$(echo "$FILTER_DESIGN" | tr '[:upper:]' '[:lower:]')
-        LABEL_SELECTOR="$LABEL_SELECTOR,design=$design_label"
-        DESC="$DESC/$FILTER_DESIGN"
-    fi
+  LABEL_SELECTOR="app=hightide,user=$USER_LABEL"
+  DESC="all"
+  if [[ -n "$FILTER_PLATFORM" ]]; then
+    LABEL_SELECTOR="$LABEL_SELECTOR,platform=$FILTER_PLATFORM"
+    DESC="$FILTER_PLATFORM"
+  fi
+  if [[ -n "$FILTER_DESIGN" ]]; then
+    design_label=$(echo "$FILTER_DESIGN" | tr '[:upper:]' '[:lower:]')
+    LABEL_SELECTOR="$LABEL_SELECTOR,design=$design_label"
+    DESC="$DESC/$FILTER_DESIGN"
+  fi
 
-    # Find matching jobs first so we can list and (if >3) confirm.
-    matched_jobs=()
-    while read -r jobname; do
-        [[ -n "$jobname" ]] && matched_jobs+=("$jobname")
-    done < <(kubectl get jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR" \
-                -o name 2>/dev/null | sed 's|^job\.batch/||' | sort)
+  # Find matching jobs first so we can list and (if >3) confirm.
+  matched_jobs=()
+  while read -r jobname; do
+    [[ -n "$jobname" ]] && matched_jobs+=("$jobname")
+  done < <(kubectl get jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR" \
+    -o name 2>/dev/null | sed 's|^job\.batch/||' | sort)
 
-    if [[ ${#matched_jobs[@]} -eq 0 ]]; then
-        echo "No matching jobs to delete (selector: $LABEL_SELECTOR)."
-        exit 0
-    fi
-
-    echo "Jobs to delete ($DESC, ${#matched_jobs[@]}):"
-    for j in "${matched_jobs[@]}"; do
-        echo "  $j"
-    done
-    echo ""
-
-    if [[ ${#matched_jobs[@]} -gt 3 ]]; then
-        read -r -p "Delete ${#matched_jobs[@]} jobs from $NAMESPACE? [y/N] " reply || reply=""
-        if [[ ! "$reply" =~ ^[yY] ]]; then
-            echo "Aborted."
-            exit 1
-        fi
-    fi
-
-    echo "Deleting $DESC hightide jobs in $NAMESPACE..."
-    kubectl delete jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR"
+  if [[ ${#matched_jobs[@]} -eq 0 ]]; then
+    echo "No matching jobs to delete (selector: $LABEL_SELECTOR)."
     exit 0
+  fi
+
+  echo "Jobs to delete ($DESC, ${#matched_jobs[@]}):"
+  for j in "${matched_jobs[@]}"; do
+    echo "  $j"
+  done
+  echo ""
+
+  if [[ ${#matched_jobs[@]} -gt 3 ]]; then
+    read -r -p "Delete ${#matched_jobs[@]} jobs from $NAMESPACE? [y/N] " reply || reply=""
+    if [[ ! "$reply" =~ ^[yY] ]]; then
+      echo "Aborted."
+      exit 1
+    fi
+  fi
+
+  echo "Deleting $DESC hightide jobs in $NAMESPACE..."
+  kubectl delete jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR"
+  exit 0
 fi
 
 # Discover designs
 discover_designs() {
-    for build_file in "$REPO_DIR"/designs/*/BUILD.bazel \
-                      "$REPO_DIR"/designs/*/*/BUILD.bazel \
-                      "$REPO_DIR"/designs/*/*/*/BUILD.bazel; do
-        [[ -f "$build_file" ]] || continue
-        grep -q 'hightide_design(' "$build_file" || continue
+  for build_file in "$REPO_DIR"/designs/*/BUILD.bazel \
+    "$REPO_DIR"/designs/*/*/BUILD.bazel \
+    "$REPO_DIR"/designs/*/*/*/BUILD.bazel; do
+    [[ -f "$build_file" ]] || continue
+    grep -q 'hightide_design(' "$build_file" || continue
 
-        local dir
-        dir=$(dirname "$build_file")
-        local name
-        name=$(grep -A1 'hightide_design(' "$build_file" | grep -oP 'name\s*=\s*"\K[^"]+')
-        [[ -z "$name" ]] && continue
+    local dir
+    dir=$(dirname "$build_file")
+    local name
+    name=$(grep -A1 'hightide_design(' "$build_file" | grep -oP 'name\s*=\s*"\K[^"]+')
+    [[ -z "$name" ]] && continue
 
-        local relpath="${dir#$REPO_DIR/designs/}"
-        local platform="${relpath%%/*}"
-        local target="//designs/$relpath:${name}_final"
+    local relpath="${dir#$REPO_DIR/designs/}"
+    local platform="${relpath%%/*}"
+    local target="//designs/$relpath:${name}_final"
 
-        echo "$platform|$name|$relpath|$target"
-    done
+    echo "$platform|$name|$relpath|$target"
+  done
 }
 
 # Collect matching designs
 DESIGNS=()
 while IFS='|' read -r platform name relpath target; do
-    # Apply platform filter
-    if [[ -n "$FILTER_PLATFORM" && "$platform" != "$FILTER_PLATFORM" ]]; then
-        continue
+  # Apply platform filter
+  if [[ -n "$FILTER_PLATFORM" && "$platform" != "$FILTER_PLATFORM" ]]; then
+    continue
+  fi
+  # Apply design filter (match against name or the design directory component)
+  if [[ -n "$FILTER_DESIGN" ]]; then
+    design_dir="${relpath#*/}" # strip platform prefix
+    if [[ "$name" != "$FILTER_DESIGN" && "$design_dir" != *"$FILTER_DESIGN"* ]]; then
+      continue
     fi
-    # Apply design filter (match against name or the design directory component)
-    if [[ -n "$FILTER_DESIGN" ]]; then
-        design_dir="${relpath#*/}"  # strip platform prefix
-        if [[ "$name" != "$FILTER_DESIGN" && "$design_dir" != *"$FILTER_DESIGN"* ]]; then
-            continue
-        fi
-    fi
-    DESIGNS+=("$platform|$name|$relpath|$target")
+  fi
+  DESIGNS+=("$platform|$name|$relpath|$target")
 done < <(discover_designs | sort)
 
 if [[ ${#DESIGNS[@]} -eq 0 ]]; then
-    echo "No designs matched the given filters."
-    echo "  Platform: ${FILTER_PLATFORM:-<all>}"
-    echo "  Design:   ${FILTER_DESIGN:-<all>}"
-    exit 1
+  echo "No designs matched the given filters."
+  echo "  Platform: ${FILTER_PLATFORM:-<all>}"
+  echo "  Design:   ${FILTER_DESIGN:-<all>}"
+  exit 1
 fi
 
 echo "Designs to submit (${#DESIGNS[@]}):"
 for entry in "${DESIGNS[@]}"; do
-    IFS='|' read -r platform name _ _ <<< "$entry"
-    echo "  $platform/$name"
+  IFS='|' read -r platform name _ _ <<<"$entry"
+  echo "  $platform/$name"
 done
 echo ""
 
 if [[ "$DRY_RUN" == false && ${#DESIGNS[@]} -gt 3 ]]; then
-    read -r -p "Submit ${#DESIGNS[@]} jobs to $NAMESPACE? [y/N] " reply || reply=""
-    if [[ ! "$reply" =~ ^[yY] ]]; then
-        echo "Aborted."
-        exit 1
-    fi
+  read -r -p "Submit ${#DESIGNS[@]} jobs to $NAMESPACE? [y/N] " reply || reply=""
+  if [[ ! "$reply" =~ ^[yY] ]]; then
+    echo "Aborted."
+    exit 1
+  fi
 fi
 
 echo "Submitting ${#DESIGNS[@]} job(s) to NRP Nautilus ($NAMESPACE)..."
@@ -198,53 +225,53 @@ echo ""
 
 # Generate and submit jobs
 for entry in "${DESIGNS[@]}"; do
-    IFS='|' read -r platform name relpath target <<< "$entry"
+  IFS='|' read -r platform name relpath target <<<"$entry"
 
-    # Create a DNS-safe job name with username prefix
-    leaf_name="${relpath##*/}"
-    job_name="${USER}-hightide-${platform}-${leaf_name}"
-    job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
+  # Create a DNS-safe job name with username prefix
+  leaf_name="${relpath##*/}"
+  job_name="${USER}-hightide-${platform}-${leaf_name}"
+  job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
 
-    # Generate YAML from template
-    yaml=$(sed \
-        -e "s|__JOB_NAME__|${job_name}|g" \
-        -e "s|__BRANCH__|${BRANCH}|g" \
-        -e "s|__BAZEL_TARGET__|${target}|g" \
-        -e "s|__UPLOAD_ARTIFACTS__|${UPLOAD_ARTIFACTS}|g" \
-        -e "s|__CPU_REQUEST__|${CPU_REQUEST}|g" \
-        -e "s|__CPU_LIMIT__|${CPU_LIMIT}|g" \
-        -e "s|__MEM_REQUEST__|${MEM_REQUEST}|g" \
-        -e "s|__MEM_LIMIT__|${MEM_LIMIT}|g" \
-        "$TEMPLATE")
+  # Generate YAML from template
+  yaml=$(sed \
+    -e "s|__JOB_NAME__|${job_name}|g" \
+    -e "s|__BRANCH__|${BRANCH}|g" \
+    -e "s|__BAZEL_TARGET__|${target}|g" \
+    -e "s|__UPLOAD_ARTIFACTS__|${UPLOAD_ARTIFACTS}|g" \
+    -e "s|__CPU_REQUEST__|${CPU_REQUEST}|g" \
+    -e "s|__CPU_LIMIT__|${CPU_LIMIT}|g" \
+    -e "s|__MEM_REQUEST__|${MEM_REQUEST}|g" \
+    -e "s|__MEM_LIMIT__|${MEM_LIMIT}|g" \
+    "$TEMPLATE")
 
-    # Add labels for filtering
-    user_label=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
-    yaml=$(echo "$yaml" | sed '/^  template:$/a\    metadata:\n      labels:\n        app: hightide\n        user: '"$user_label"'\n        platform: '"$platform"'\n        design: '"$(echo "$name" | tr '[:upper:]' '[:lower:]')"'')
+  # Add labels for filtering
+  user_label=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
+  yaml=$(echo "$yaml" | sed '/^  template:$/a\    metadata:\n      labels:\n        app: hightide\n        user: '"$user_label"'\n        platform: '"$platform"'\n        design: '"$(echo "$name" | tr '[:upper:]' '[:lower:]')"'')
 
-    if [[ "$DRY_RUN" == true ]]; then
-        echo "--- # $platform / $name"
-        echo "$yaml"
-        echo ""
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "--- # $platform / $name"
+    echo "$yaml"
+    echo ""
+  else
+    echo -n "  $platform/$name ($target) ... "
+    if echo "$yaml" | kubectl apply -n "$NAMESPACE" -f - >/dev/null 2>&1; then
+      echo "submitted"
     else
-        echo -n "  $platform/$name ($target) ... "
-        if echo "$yaml" | kubectl apply -n "$NAMESPACE" -f - >/dev/null 2>&1; then
-            echo "submitted"
-        else
-            # Job may already exist — try deleting and resubmitting
-            kubectl delete job "$job_name" -n "$NAMESPACE" --ignore-not-found=true >/dev/null 2>&1
-            if echo "$yaml" | kubectl apply -n "$NAMESPACE" -f - >/dev/null 2>&1; then
-                echo "resubmitted"
-            else
-                echo "FAILED"
-                echo "$yaml" | kubectl apply -n "$NAMESPACE" -f - 2>&1 | sed 's/^/    /'
-            fi
-        fi
+      # Job may already exist — try deleting and resubmitting
+      kubectl delete job "$job_name" -n "$NAMESPACE" --ignore-not-found=true >/dev/null 2>&1
+      if echo "$yaml" | kubectl apply -n "$NAMESPACE" -f - >/dev/null 2>&1; then
+        echo "resubmitted"
+      else
+        echo "FAILED"
+        echo "$yaml" | kubectl apply -n "$NAMESPACE" -f - 2>&1 | sed 's/^/    /'
+      fi
     fi
+  fi
 done
 
 if [[ "$DRY_RUN" == false ]]; then
-    echo ""
-    echo "Monitor with:"
-    echo "  ./k8s/run.sh --status"
-    echo "  kubectl logs -f job/hightide-<platform>-<design> -n $NAMESPACE"
+  echo ""
+  echo "Monitor with:"
+  echo "  ./k8s/run.sh --status"
+  echo "  kubectl logs -f job/hightide-<platform>-<design> -n $NAMESPACE"
 fi
