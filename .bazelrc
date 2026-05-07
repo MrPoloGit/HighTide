@@ -10,6 +10,11 @@ try-import %workspace%/bazel-orfs/.bazelrc
 #   build --remote_upload_local_results=true
 build --remote_cache=https://cache.hightide-benchmarks.dev
 build --remote_upload_local_results=false
+# Compress payloads on the wire.  ORFS produces multi-100-MB stage ODBs
+# (2_floorplan.odb, 3_place.odb on big designs like NVDLA partition_c)
+# that exceed Cloudflare's free-tier 100 MB request-body limit on upload.
+# zstd compression typically gets ODBs well under that ceiling.
+build --remote_cache_compression
 
 # Local disk cache as fallback
 build --disk_cache=~/.cache/bazel-disk-cache
