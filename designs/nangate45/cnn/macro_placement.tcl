@@ -14,19 +14,21 @@
 #   M3 (MY) -> right edge at  x=3225.26  (5 um seam M2-M3)
 #   M4 (R0) -> left  edge at  x=3400     <- 175 um channel between M3 and M4
 #
-# Core for nangate45 cnn at util=55: (1.14, 1.40) to (4501.10, 4501.00).
+# Die: 4502 x 4277 (CORE_AREA 2..4500 x 2..4275). Macros placed at
+# y=2275..4271.4, leaving ~3.6 um margin to the core top and a
+# 2275 um band below for stdcells.
 
 # Pair 1: M1 facing M2 (175 um channel)
 place_macro -macro_name inst_ram_w16_l32768_id0_0/u_ram_w16_l32768_id0_0_mem \
-            -location {51 2500} -orientation MY
+            -location {51 2275} -orientation MY
 
 place_macro -macro_name inst_ram_w16_l32768_id0_1/u_ram_w16_l32768_id0_1_mem \
-            -location {1224 2500} -orientation R0
+            -location {1224 2275} -orientation R0
 
 # 5 um seam between M2 (right edge x=2222.26) and M3 (left edge x=2227)
 place_macro -macro_name inst_ram_w16_l32768_id1_0/u_ram_w16_l32768_id1_0_mem \
-            -location {2227 2500} -orientation MY
+            -location {2227 2275} -orientation MY
 
 # Pair 2: M3 facing M4 (175 um channel)
 place_macro -macro_name inst_ram_w16_l32768_id1_1/u_ram_w16_l32768_id1_1_mem \
-            -location {3400 2500} -orientation R0
+            -location {3400 2275} -orientation R0

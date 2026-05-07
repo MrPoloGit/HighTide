@@ -22,7 +22,8 @@ hightide_design(
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "CORE_UTILIZATION": "55",
+        "DIE_AREA": "0 0 4502 4277",
+        "CORE_AREA": "2 2 4500 4275",
         "PLACE_DENSITY": "0.65",
         "MACRO_PLACE_HALO": "20 20",
         "MACRO_BLOCKAGE_HALO": "0.5",
