@@ -30,12 +30,17 @@ git -C "$WT" pull --ff-only
 
 ## Step 2: Detect first-time migration
 
-Look for canonical filenames (no SHA component).  These predate this skill and need a one-time rename to the new convention:
+Look for canonical filenames (no SHA component) in **both** the full-resolution PNGs and the JPEG thumbnails — they migrate together so `<img src=…>` and `<a href=…>` always reference the same SHA.  Either may predate this skill and need a one-time rename to the versioned convention:
 
 ```bash
+# full-res PNGs
 ls "$WT"/figures/*.png 2>/dev/null \
     | grep -vE '_[0-9a-f]{7,}\.png$' \
     | grep -vE '/(HighTideFLOW|lighthouse|final_placement_)'   # exclude infra figures, not per-design
+
+# JPEG thumbnails
+ls "$WT"/figures/thumbs/*.jpg 2>/dev/null \
+    | grep -vE '_[0-9a-f]{7,}\.jpg$'
 ```
 
 Anything that comes back is on the canonical-name convention.  For each, decode `<design>_<platform>` from the filename, compute the design's current SHA (Step 4 below), then:
@@ -43,9 +48,11 @@ Anything that comes back is on the canonical-name convention.  For each, decode 
 ```bash
 git mv "$WT"/figures/<design>_<platform>.png \
        "$WT"/figures/<design>_<platform>_<sha>.png
+git mv "$WT"/figures/thumbs/<design>_<platform>.jpg \
+       "$WT"/figures/thumbs/<design>_<platform>_<sha>.jpg
 ```
 
-Use `git mv` so the rename history is preserved.
+Use `git mv` so the rename history is preserved.  Both renames must use the *same* SHA for a given (design, platform) — if either side already has a versioned name, use that SHA for the other side rather than recomputing.
 
 After all migrations, the existing single `<tr>` in results.html (currently a hardcoded lfsr row) should be replaced with a freshly-generated row in Step 6.  Don't try to migrate the row in place — just regenerate it.
 
@@ -92,12 +99,19 @@ For each stale (platform, design):
 # Build only this design's gallery target.
 bazel build "$gallery_target"
 
-# Copy versioned image, delete the previous one.
+# Copy versioned full-res image, delete the previous one.
 new_img="$WT/figures/${leaf}_${platform}_${sha}.png"
 old_img=$(ls "$WT"/figures/${leaf}_${platform}_*.png 2>/dev/null | grep -v "_${sha}.png$" | head -1)
 cp "bazel-bin/designs/$design_dir/${leaf}_gallery.png" "$new_img"
 [[ -n "$old_img" ]] && git -C "$WT" rm -f "$old_img"
 git -C "$WT" add "$new_img"
+
+# Generate the versioned thumbnail, delete the previous one.
+python3 tools/gallery/make_thumbnails.py "$WT/figures"   # rebuilds thumbs/ for any new PNG
+new_thumb="$WT/figures/thumbs/${leaf}_${platform}_${sha}.jpg"
+old_thumb=$(ls "$WT"/figures/thumbs/${leaf}_${platform}_*.jpg "$WT"/figures/thumbs/${leaf}_${platform}.jpg 2>/dev/null | grep -v "_${sha}.jpg$" | head -1)
+[[ -n "$old_thumb" ]] && git -C "$WT" rm -f "$old_thumb"
+git -C "$WT" add "$new_thumb"
 ```
 
 Capture QoR from the JSON using the same metric keys `tools/summary.sh` reads:
@@ -146,7 +160,14 @@ If a (platform, design) is currently NOT CACHED (Step 5 skipped it), preserve an
 
 ## Step 7: Update gallery.html thumbnails
 
-`webpage/gallery.html` references the same images.  Replace its `<img src="figures/<old>.png">` references to point at the new versioned filenames.  Same migration rule applies on first run.
+`webpage/gallery.html` references the same images.  Both reference families need to point at the versioned names from Step 5:
+
+- `<a class="thumb-link" href="figures/<design>_<platform>_<sha>.png">` — full-res click target
+- `<img src="figures/thumbs/<design>_<platform>_<sha>.jpg">` — visible thumbnail
+
+The full-res `href` and the thumbnail `src` MUST share the same SHA — they describe the same routed view; mismatched SHAs means the user clicks a thumb of one build and lands on a different build's full image.
+
+Same migration rule applies on first run for both the `.png` and `.jpg` references.
 
 ## Step 8: Update the Design Portfolio platform badges in index.html
 
