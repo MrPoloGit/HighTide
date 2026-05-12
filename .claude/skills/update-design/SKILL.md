@@ -49,13 +49,19 @@ For each design with a `setup.sh`, check pinned tool versions against latest:
 
 Summarize each with the same minor/moderate/major classification.
 
-### 3. Audit ORFS submodule
+### 3. Audit ORFS pin
 
-Check `OpenROAD-flow-scripts` for upstream updates:
+The OpenROAD-flow-scripts pin lives in `MODULE.bazel` (`bazel_dep(name = "orfs")` + `git_override(... commit = "...")`). To audit:
 ```bash
-git -C OpenROAD-flow-scripts log --oneline HEAD..origin/main | head -20
+# Read current pin
+grep -A4 'module_name = "orfs"' MODULE.bazel
+
+# Compare to upstream HEAD
+git ls-remote https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git HEAD
 ```
-Summarize the nature of ORFS changes (new features, bug fixes, platform updates, etc.).
+
+The `bazel-orfs` submodule is the source of truth for the recommended ORFS / OpenROAD / Qt pins — check its `MODULE.bazel` for the upstream's chosen versions and bump the root pins in sync (see `MODULE.bazel` header comment).
+Summarize the nature of ORFS / OpenROAD / Yosys changes (new features, bug fixes, platform updates, etc.).
 
 ### 4. Present summary table
 
@@ -193,29 +199,29 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 3. **Regenerate RTL:**
    ```bash
-   # Clean old dev artifacts
-   make DESIGN_CONFIG=./designs/$1/$0/config.mk clean_design
-   # Regenerate
-   make DESIGN_CONFIG=./designs/$1/$0/config.mk dev
+   # Clean cached dev artifacts (force the genrule to re-run)
+   rm -rf designs/src/$0/dev/generated
+   # Regenerate via the Bazel update-rtl define
+   bazel build --define update_rtl=true //designs/src/$0:rtl
    ```
 
 4. **Check for new or changed memories:**
    - Compare the new RTL against the old to identify any new memory modules
    - If new memories are found, create FakeRAM LEF/LIB files following the patterns in `designs/$1/$0/sram/` or other designs like NyuziProcessor/liteeth
-   - Update `config.mk` ADDITIONAL_LEFS and ADDITIONAL_LIBS if new FakeRAM files were added
+   - Update the design's `BUILD.bazel` `sources` dict (`ADDITIONAL_LEFS` / `ADDITIONAL_LIBS` filegroups) if new FakeRAM files were added
 
 5. **Promote release RTL:**
    ```bash
-   cp designs/src/$0/dev/generated/$0.v designs/src/$0/$0.v
+   cp bazel-bin/designs/src/$0/dev_$0.v designs/src/$0/$0.v
    ```
-   (Adjust the path based on where the design's `verilog.mk` expects release RTL)
+   (Adjust the source/destination path to match the genrule's outputs and where the design's `rtl_release` filegroup expects the file.)
 
-6. **Check if `verilog.mk` needs updates:**
-   - If new Verilog files were added or file names changed, update `designs/src/$0/verilog.mk`
+6. **Check if `BUILD.bazel` filegroups need updates:**
+   - If new Verilog files were added or names changed, update the `rtl_release` filegroup (and the `rtl_dev_gen` `outs` / copy commands) in `designs/src/$0/BUILD.bazel`.
 
 7. **Test the flow:**
    ```bash
-   make DESIGN_CONFIG=./designs/$1/$0/config.mk
+   bazel build //designs/$1/$0:$0_final
    ```
 
 ### B. Update tool dependencies (JDK, sbt, sv2v, Python packages, etc.)
@@ -236,7 +242,7 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 4. **Regenerate:**
    ```bash
-   make DESIGN_CONFIG=./designs/$1/$0/config.mk dev
+   bazel build --define update_rtl=true //designs/src/$0:rtl
    ```
 
 5. **Verify RTL matches or update release copy** if the generated Verilog changed.
@@ -244,18 +250,18 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 ### C. Tune flow parameters (timing, utilization, density)
 
 1. **Read current config:**
-   - `designs/$1/$0/config.mk`
+   - `designs/$1/$0/BUILD.bazel`
    - `designs/$1/$0/constraint.sdc`
-   - Check recent flow reports in `reports/$1/$0/base/` if available
+   - Check recent flow reports in `bazel-bin/designs/$1/$0/reports/$1/$0/base/` if available
 
 2. **Congestion troubleshooting priority:**
    It is preferable to keep cell utilization high. If there are congestion problems, try these before lowering utilization:
-   - First, fix IO pin placement — create or adjust `io.tcl` to spread pins and reduce congestion near IO (see `designs/asap7/gemmini/io.tcl` for reference). Set `IO_CONSTRAINTS` and `FOOTPRINT_TCL` in config.mk.
+   - First, fix IO pin placement — create or adjust `io.tcl` to spread pins and reduce congestion near IO (see `designs/asap7/gemmini/io.tcl` for reference). Set `IO_CONSTRAINTS` and `FOOTPRINT_TCL` in the BUILD.bazel `arguments` dict.
    - Second, adjust `MACRO_PLACE_HALO` — increase spacing around macros to give the router more room (e.g., `5 5` or `6 6`).
    - Third, try `PLACE_PINS_ARGS = -min_distance <N> -min_distance_in_tracks` to spread auto-placed pins.
    - Only as a last resort, lower `CORE_UTILIZATION` or `PLACE_DENSITY`.
 
-3. **Common adjustments in `config.mk`:**
+3. **Common adjustments in `BUILD.bazel` `arguments`:**
    - `CORE_UTILIZATION` — Prefer keeping this high; only lower as a last resort for congestion
    - `PLACE_DENSITY` — Affects routing congestion (0.6-0.8 typical)
    - `CORE_AREA` / `DIE_AREA` — For explicit die size control instead of utilization-based
@@ -270,9 +276,9 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 4. **Test:**
    ```bash
-   make DESIGN_CONFIG=./designs/$1/$0/config.mk clean_all
-   make DESIGN_CONFIG=./designs/$1/$0/config.mk
+   bazel build //designs/$1/$0:$0_final
    ```
+   (Bazel re-runs only affected stages when arguments or sources change.)
 
 ### D. Add FakeRAM for newly identified memories
 
@@ -285,15 +291,27 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
    - Use existing FakeRAM files from the same platform as templates
    - Place in `designs/$1/$0/sram/lef/` and `designs/$1/$0/sram/lib/`
 
-3. **Update `config.mk`** to reference the new FakeRAM files:
-   ```makefile
-   export ADDITIONAL_LEFS = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/sram/lef/*.lef
-   export ADDITIONAL_LIBS = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/sram/lib/*.lib
-   export GDS_ALLOW_EMPTY = fakeram*
-   export MACRO_PLACE_HALO = 5 5
-   ```
+3. **Update `BUILD.bazel`** to reference the new FakeRAM files:
+   ```python
+   filegroup(name = "sram_lefs", srcs = glob(["sram/lef/*.lef"]))
+   filegroup(name = "sram_libs", srcs = glob(["sram/lib/*.lib"]))
 
-4. **Ensure `verilog.mk` does not include the memory module source** so synthesis instantiates the black-box macro instead.
+   hightide_design(
+       ...
+       sources = {
+           "SDC_FILE": [":constraint.sdc"],
+           "ADDITIONAL_LEFS": [":sram_lefs"],
+           "ADDITIONAL_LIBS": [":sram_libs"],
+       },
+       arguments = {
+           ...
+           "MACRO_PLACE_HALO": "5 5",
+       },
+   )
+   ```
+   (`GDS_ALLOW_EMPTY = fakeram.*` is the default from `hightide_design()`.)
+
+4. **Ensure the design's `rtl` filegroup does not include the memory module source** so synthesis instantiates the black-box macro instead.
 
 ### E. Port to a new platform
 
@@ -303,7 +321,7 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
    ```
 
 2. **Copy and adapt from an existing platform:**
-   - `config.mk` — Change PLATFORM, adjust utilization/density for the new technology
+   - `BUILD.bazel` — Change `platform`, adjust utilization/density `arguments` for the new technology
    - `constraint.sdc` — Adjust clock period for the technology node
    - `sram/` — Create platform-specific FakeRAM files if needed (different metal stacks and design rules per platform)
 
@@ -314,12 +332,11 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 4. **Test the new platform:**
    ```bash
-   make DESIGN_CONFIG=./designs/<new-platform>/$0/config.mk
+   bazel build //designs/<new-platform>/$0:$0_final
    ```
 
 ## General Notes
 
-- Use `./runorfs_ni.sh` prefix when running flows non-interactively (e.g., from Claude Code). The regular `runorfs.sh` uses `docker run -it` which requires an interactive terminal.
-- Flow outputs go to `{logs,objects,reports,results}/$1/$0/base/`
-- The flow resumes from the last completed stage in dev mode (checks for 1_synth.v, 2_floorplan.odb, etc.)
-- Always `clean_all` before a full re-run if config.mk or constraint.sdc changed significantly.
+- Flow outputs go to `bazel-bin/designs/$1/$0/{logs,objects,reports,results}/$1/$0/base/`.
+- Bazel caches per-stage outputs; arguments / sources changes invalidate only the affected stages automatically — no manual clean needed.
+- To force a single design's results to re-run, change an argument in its `BUILD.bazel` or pass `--strategy=<target>=local`. **Never** `bazel clean --expunge` — synthesis takes hours.

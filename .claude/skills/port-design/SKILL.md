@@ -11,29 +11,28 @@ You are porting the design `$0` from `$1` to `$2`.
 ## Prerequisites
 
 Before starting, verify:
-- The design exists at `designs/$1/$0/` with a working config.mk and BUILD.bazel
+- The design exists at `designs/$1/$0/` with a working `BUILD.bazel`
 - The RTL source exists at `designs/src/$0/` (shared across platforms)
 
 ## Step-by-step Process
 
 ### 1. Analyze the source design
 
-Read the source platform's configuration to understand:
-- `designs/$1/$0/config.mk` — all ORFS parameters
-- `designs/$1/$0/BUILD.bazel` — Bazel flow configuration
+Read the source platform's `BUILD.bazel` to understand:
+- `designs/$1/$0/BUILD.bazel` — all flow parameters (in `arguments`) and sources
 - `designs/$1/$0/constraint.sdc` — clock period and port names
-- Whether it has FakeRAM memories (ADDITIONAL_LEFS/ADDITIONAL_LIBS)
+- Whether it has FakeRAM memories (ADDITIONAL_LEFS / ADDITIONAL_LIBS in `sources`)
 - Whether it has custom pdn.tcl or io.tcl
 - Whether it uses a macros.v wrapper (for designs that remap memory instantiations)
 - Whether it's a multi-variant design with subdirectories
 
 Also study existing designs on the target platform to understand conventions:
-- Read 2-3 existing `designs/$2/*/config.mk` and `BUILD.bazel` files
+- Read 2-3 existing `designs/$2/*/BUILD.bazel` files
 - Note the metal layer names and parameter conventions
 
 ### 2. Calibrate scaling ratios from existing cross-platform designs
 
-Compare designs that already exist on both platforms to determine scaling factors. Read the constraint.sdc and config.mk for each shared design on both `$1` and `$2`.
+Compare designs that already exist on both platforms to determine scaling factors. Read the constraint.sdc and BUILD.bazel for each shared design on both `$1` and `$2`.
 
 **Clock period scaling:** For each design on both platforms, compute the ratio `target_period / source_period`. Average these ratios to get a clock scaling factor. Be mindful of unit differences (asap7 uses picoseconds, nangate45/sky130hd use nanoseconds).
 
@@ -71,23 +70,16 @@ Use the standard SDC template matching the target platform's conventions (ns-bas
 
 **Important:** asap7 SDC files sometimes use fixed input/output delays (e.g., `set_input_delay 10`). For other platforms, use the `[expr $clk_period * $clk_io_pct]` pattern instead.
 
-### 6. Create config.mk
+### 6. Create BUILD.bazel
 
-Copy the source config.mk and modify:
-- Change `PLATFORM` to `$2`
-- Keep the same `DESIGN_NAME` and synthesis parameters (`SYNTH_HIERARCHICAL`, `ABC_AREA`, `TNS_END_PERCENT`)
+Copy the source `BUILD.bazel` and modify:
+- Set `platform = "$2"`
+- Keep the same RTL source reference (`//designs/src/$0:rtl`) and synthesis arguments (`SYNTH_HIERARCHICAL`, `ABC_AREA`, `TNS_END_PERCENT`)
 - Scale `CORE_UTILIZATION` down for larger technology nodes. Designs with high routing demand (wide combinational datapaths like sha3) may need significantly lower utilization on nangate45/sky130hd than on asap7 because the routing resources per unit area are different. Calibrate using existing cross-platform designs. As a rule of thumb, reduce utilization by ~30-35% from asap7 to nangate45 (e.g., 70% → 45%).
 - Prefer `PLACE_DENSITY_LB_ADDON` over fixed `PLACE_DENSITY` — it adapts better to different die sizes
 - If the source uses `DIE_AREA`/`CORE_AREA` (explicit dimensions), scale them using the area ratio from step 2, or switch to `CORE_UTILIZATION` to let ORFS auto-size
-- Update `ADDITIONAL_LEFS`/`ADDITIONAL_LIBS` paths to point to `$2` platform directory
+- Update `ADDITIONAL_LEFS` / `ADDITIONAL_LIBS` (in `sources`) to point at the new platform's `sram_lefs` / `sram_libs` filegroups
 - Scale `MACRO_PLACE_HALO` proportionally to technology node (e.g., if asap7 uses `6 6`, nangate45 might use `40 40` based on the ratio seen in existing designs)
-
-### 7. Create BUILD.bazel
-
-Follow the pattern from existing designs on the target platform. Key changes:
-- Set `platform = "$2"`
-- Update SRAM LEF/LIB references to point to the new platform's sram/ directory
-- Keep the same RTL source references (`//designs/src/$0:rtl`)
 
 For designs with memories, create a parent BUILD.bazel with filegroups:
 ```python
@@ -97,10 +89,7 @@ filegroup(name = "sram_lefs", srcs = glob(["sram/lef/*.lef"]))
 filegroup(name = "sram_libs", srcs = glob(["sram/lib/*.lib"]))
 ```
 
-**Bazel PDK availability:** Not all platforms have Bazel PDK targets defined in bazel-orfs. The PDK list is in `docker.BUILD.bazel` within the bazel-orfs repo. If the target platform is not in that list, the Bazel flow will fail with "no such target" for the platform's config.mk. To add a new platform to the Bazel flow:
-1. Check bazel-orfs's `docker.BUILD.bazel` for the current PDK list
-2. If the target platform is missing, add it to the `for pdk in [...]` loop in `docker.BUILD.bazel` upstream in bazel-orfs
-3. Until that's merged, create the design files anyway (config.mk, BUILD.bazel, constraint.sdc) — the Make flow will work, and the Bazel flow will work once the PDK is added upstream
+**Bazel PDK availability:** Not all platforms have Bazel PDK targets defined in bazel-orfs. The PDK list lives in `bazel-orfs/docker.BUILD.bazel`. If the target platform is missing, add it to the `for pdk in [...]` loop there and bump the submodule pin in this repo to pick up the change before the Bazel flow can build for that platform.
 
 ### 8. Generate FakeRAM files (if design has memories)
 
@@ -148,18 +137,14 @@ If coordinate scaling is impractical (e.g., the source uses procedural placement
 ### 11. Test the build
 
 ```bash
-# Bazel flow
 bazel build //designs/$2/$0:$0_synth    # Test synthesis first
 bazel build //designs/$2/$0:$0_final    # Full flow
-
-# Make flow
-make DESIGN_CONFIG=./designs/$2/$0/config.mk
 ```
 
 If synthesis fails, check:
 - FakeRAM module names match between Verilog and LEF/LIB
 - Clock port name in SDC matches the actual top-level port
-- VERILOG_FILES paths are correct
+- `verilog_files` label resolves to the expected RTL filegroup
 
 If placement/routing fails, try:
 - Lowering `CORE_UTILIZATION` (e.g., from 49 to 40)
@@ -169,6 +154,6 @@ If placement/routing fails, try:
 ### 12. Verify generated files
 
 After a successful build, check:
-- `reports/$2/$0/*/` for QoR reports
+- `bazel-bin/designs/$2/$0/reports/$2/$0/base/` for QoR reports
 - No DRC violations in the final report
 - Timing meets the target clock period (some slack is expected for initial ports)

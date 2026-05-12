@@ -521,12 +521,7 @@ Base (Han-Carlson)
 
 #### Requirements for Arithmetic Module Swap
 
-1. Hierarchical netlist with arithmetic operators.  Yosys can produce such designs by enabling "wrapped operator synthesis".
-In OpenROAD-flow-scripts, this can be done as follows:
-
-cd OpenROAD-flow-scripts/flow
-
-make SYNTH_WRAPPED_OPERATORS=1
+1. Hierarchical netlist with arithmetic operators.  Yosys can produce such designs by enabling "wrapped operator synthesis" — pass `SYNTH_WRAPPED_OPERATORS=1` to the ORFS flow.
 
 This requires a Verilog netlist.  DEF netlist alone is not sufficient for hierarchical optimization.
 

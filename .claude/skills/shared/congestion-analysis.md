@@ -30,13 +30,13 @@ Total             6811           474            6.96%             0 /  0 /  0
 
 When congestion blocks further progress, try fixes in this order (prefer keeping utilization high):
 
-1. **IO pin placement** — Create or improve `io.tcl` to spread pins evenly across die edges. See `designs/asap7/gemmini/io.tcl` for reference. Set both `IO_CONSTRAINTS` and `FOOTPRINT_TCL` to the io.tcl path in config.mk.
+1. **IO pin placement** — Create or improve `io.tcl` to spread pins evenly across die edges. See `designs/asap7/gemmini/io.tcl` for reference. Set both `IO_CONSTRAINTS` and `FOOTPRINT_TCL` to the io.tcl path in BUILD.bazel `arguments`.
 
 2. **Macro halo** — If the design has FakeRAM macros, increase `MACRO_PLACE_HALO` (e.g., from `5 5` to `6 6` or `8 8`) to give the router clearance around macros.
 
 3. **Pin spacing** — Add `PLACE_PINS_ARGS = -min_distance 30 -min_distance_in_tracks` to spread auto-placed pins.
 
-4. **ABC area optimization** — Set `ABC_AREA = 1` in config.mk to reduce cell count.
+4. **ABC area optimization** — Set `ABC_AREA = 1` in BUILD.bazel `arguments` to reduce cell count.
 
 5. **Lower utilization** — Only as a last resort. Reduce `CORE_UTILIZATION` by 5% increments.
 
@@ -46,7 +46,7 @@ When increasing utilization, check the GRT overflow after each iteration. A desi
 
 ## Visual diagnosis
 
-For spatial congestion analysis, generate heatmap images. See `.claude/skills/shared/image-generation.md` for the Tcl scripts and Docker commands. The most useful heatmaps for congestion are:
+For spatial congestion analysis, generate heatmap images. See `.claude/skills/shared/image-generation.md` for the Tcl scripts and the `xvfb-run` invocation. The most useful heatmaps for congestion are:
 - **Routing congestion** — actual congestion after routing
 - **RUDY** — routing demand estimation (faster, available before detailed routing)
 - **Placement density** — cell density hotspots that correlate with congestion

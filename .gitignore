@@ -1,11 +1,3 @@
-platforms
-util
-scripts
-results
-logs
-reports
-objects
-.dev*
 .venv
 sv2v
 **/dev/liteeth_builds

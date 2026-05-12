@@ -8,7 +8,7 @@ argument-hint: "<platform>/<design> [stage] [issue-description]"
 
 You are debugging the design at `designs/$0`. The user may have specified a stage (`$1`) and/or an issue description (`$2`). If the stage or issue is not provided, determine them by examining build artifacts and logs.
 
-**Important:** HighTide is a benchmark suite — the RTL is a fixed input. Never suggest modifying the upstream Verilog/RTL. All fixes must be scoped to flow parameters (config.mk), timing constraints (constraint.sdc), physical design files (io.tcl, pdn.tcl), and FakeRAM configuration.
+**Important:** HighTide is a benchmark suite — the RTL is a fixed input. Never suggest modifying the upstream Verilog/RTL. All fixes must be scoped to flow parameters (BUILD.bazel `arguments`), timing constraints (constraint.sdc), physical design files (io.tcl, pdn.tcl), and FakeRAM configuration.
 
 ## Step 0: Check prior art — CLAUDE.md bugs and other designs' DECISIONS.md
 
@@ -74,12 +74,11 @@ Identify the **last completed stage** (1_synth, 2_floorplan, 3_place, 4_cts, 5_r
 ## Step 2: Read the Design Configuration
 
 Read these files to understand the design setup:
-- `designs/<platform>/<design>/config.mk` — flow parameters
+- `designs/<platform>/<design>/BUILD.bazel` — flow parameters (in `arguments`) and source files
 - `designs/<platform>/<design>/constraint.sdc` — timing constraints
-- `designs/<platform>/<design>/BUILD.bazel` — Bazel flow config (if it exists)
 - `designs/<platform>/<design>/pdn.tcl` — power delivery (if it exists)
 - `designs/<platform>/<design>/io.tcl` — pin placement (if it exists)
-- `designs/src/<design>/verilog.mk` — which Verilog files are used
+- `designs/src/<design>/BUILD.bazel` — which Verilog files are in the `rtl` filegroup
 
 ## Step 3: Analyze by Failure Type
 
@@ -97,21 +96,21 @@ tail -200 artifacts/$0/logs/*/base/1_1_yosys.log 2>/dev/null
 
 **Common synthesis issues:**
 
-1. **Missing modules / unresolved references**: Check that all Verilog files are listed in `verilog.mk` or `BUILD.bazel`. Search the RTL for the missing module name.
+1. **Missing modules / unresolved references**: Check that all Verilog files are reachable via the `rtl` filegroup in `designs/src/<design>/BUILD.bazel`. Search the RTL for the missing module name.
 
 2. **Incorrectly synthesized memories**: Yosys may infer memories as flip-flops instead of using FakeRAM macros.
    - Check the synth log for `Creating memory...` or `$mem` cells
    - Search for large register arrays: `grep -i "mem\|ram\|reg.*\[" <synth-log>`
    - If memories are being flattened into flops, the design needs FakeRAM black-box macros:
      - FakeRAM LEF/LIB files must exist in `designs/<platform>/<design>/sram/`
-     - `ADDITIONAL_LEFS` and `ADDITIONAL_LIBS` must be set in config.mk
+     - `ADDITIONAL_LEFS` and `ADDITIONAL_LIBS` must be present in BUILD.bazel `sources`
      - The Verilog module interfaces must match the FakeRAM macro pin names
      - `SYNTH_MEMORY_MAX_BITS` may need adjustment to prevent Yosys from synthesizing large memories
    - A suspiciously high cell count is a strong indicator memories were flattened
 
-3. **SystemVerilog not supported**: Yosys has limited SV support. The design may need sv2v conversion. Check `designs/src/<design>/dev/setup.sh`.
+3. **SystemVerilog not supported**: Yosys has limited SV support. Prefer `SYNTH_HDL_FRONTEND = slang` (yosys-slang) in BUILD.bazel `arguments`; failing that, the design may need sv2v conversion in `designs/src/<design>/dev/setup.sh`.
 
-4. **Synthesis timeout / excessive runtime**: Consider `SYNTH_HIERARCHICAL = 1` and `ABC_AREA = 1` in config.mk.
+4. **Synthesis timeout / excessive runtime**: Consider `SYNTH_HIERARCHICAL = 1` and `ABC_AREA = 1` in BUILD.bazel `arguments`.
 
 ---
 
@@ -253,7 +252,7 @@ Clock tree insertion delay can cause timing violations when IO constraints assum
 **Common timing fixes:**
 1. **Relax clock period** in `constraint.sdc` to find the achievable Fmax for this design/platform combination
 2. **Adjust IO constraints** as described above if clock skew is causing false IO violations
-3. **Set `TNS_END_PERCENT = 100`** in config.mk to prioritize timing closure
+3. **Set `TNS_END_PERCENT = 100`** in BUILD.bazel `arguments` to prioritize timing closure
 4. **Hold violations** are usually fixed automatically by the flow; if persistent, check for clock tree issues
 
 ---
@@ -278,7 +277,7 @@ head -50 reports/<platform>/<design>/base/6_finish_drc.rpt 2>/dev/null
 
 For visual diagnosis of floorplan, placement, congestion, and power routing problems, generate images using OpenROAD's `save_image` command.
 
-See `.claude/skills/shared/image-generation.md` for the full Docker/Xvfb setup, Tcl scripts, and heatmap variants (routing congestion, placement density, RUDY, IR drop).
+See `.claude/skills/shared/image-generation.md` for the `xvfb-run` setup, Tcl scripts, and heatmap variants (routing congestion, placement density, RUDY, IR drop).
 
 ---
 
@@ -292,25 +291,18 @@ Based on the diagnosis, recommend specific changes. Always explain **what** to c
 1. Check if the clock period target is realistic for the platform and design complexity
 2. Check if failing paths are IO-constrained — if so, adjust `clk_io_pct` or IO delays to account for clock tree insertion delay
 3. Add `set_clock_uncertainty` to model expected skew
-4. Set `TNS_END_PERCENT = 100` in config.mk
+4. Set `TNS_END_PERCENT = 100` in BUILD.bazel `arguments`
 5. Relax clock period to find the true achievable Fmax
 
 **Memory fix priority:**
 1. Identify which memories need FakeRAM black-boxing
 2. Create FakeRAM LEF/LIB files (use existing designs on the same platform as templates)
-3. Update config.mk with `ADDITIONAL_LEFS` / `ADDITIONAL_LIBS`
+3. Add `ADDITIONAL_LEFS` / `ADDITIONAL_LIBS` filegroups to BUILD.bazel `sources`
 
 ## Step 6: Test the Fix
 
 After applying changes, re-run the flow:
 
-**Make flow:**
-```bash
-./runorfs_ni.sh make DESIGN_CONFIG=./designs/<platform>/<design>/config.mk clean_all
-./runorfs_ni.sh make DESIGN_CONFIG=./designs/<platform>/<design>/config.mk
-```
-
-**Bazel flow:**
 ```bash
 bazel build //designs/<platform>/<design>:<design>_final
 ```
