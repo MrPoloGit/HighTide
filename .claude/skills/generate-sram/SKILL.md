@@ -78,10 +78,16 @@ Use `tools/bsg_fakeram/example_cfgs/freepdk45.cfg` as the base config (tech_nm: 
    - `<name>/<name>.lib` → Liberty file
    - `<name>/<name>.v` → Verilog behavioral model
 
-6. **Report the generated files** and suggest config.mk additions:
-   ```makefile
-   export ADDITIONAL_LEFS = path/to/<name>.lef
-   export ADDITIONAL_LIBS = path/to/<name>.lib
+6. **Report the generated files** and suggest BUILD.bazel additions:
+   ```python
+   filegroup(name = "sram_lefs", srcs = glob(["sram/lef/*.lef"]))
+   filegroup(name = "sram_libs", srcs = glob(["sram/lib/*.lib"]))
+   # then in the hightide_design() call:
+   sources = {
+       "SDC_FILE": [":constraint.sdc"],
+       "ADDITIONAL_LEFS": [":sram_lefs"],
+       "ADDITIONAL_LIBS": [":sram_libs"],
+   },
    ```
 
 ## Important Notes
@@ -89,5 +95,5 @@ Use `tools/bsg_fakeram/example_cfgs/freepdk45.cfg` as the base config (tech_nm: 
 - bsg_fakeram uses VLSIDA's fork with multi-port support (1rw, 1r1w, 2r1w, etc.)
 - The `rw` port type creates a single read-write port (standard SRAM interface: ce_in, we_in, addr_in, wd_in, rd_out, clk)
 - Pin names for `rw` ports: `rw0_rd_out`, `rw0_addr_in`, `rw0_we_in`, `rw0_wd_in`, `rw0_ce_in`, `rw0_clk`
-- Do NOT include the generated `.v` files in `VERILOG_FILES` — yosys will synthesize the internal reg arrays. Let yosys auto-blackbox undeclared modules instead.
+- Do NOT include the generated `.v` files in the design's `rtl` filegroup — yosys will synthesize the internal reg arrays. Let yosys auto-blackbox undeclared modules instead.
 - The design's RTL must instantiate the fakeram module by name with matching port connections.

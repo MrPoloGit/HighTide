@@ -9,7 +9,7 @@ For a fully guided workflow, use the Claude Code skill: `/new-design <design-nam
 Adding a design involves:
 1. Adding the upstream repo as a git submodule
 2. Creating a build script to generate Verilog from the source HDL
-3. Creating platform-specific configuration (SDC, config.mk, BUILD.bazel)
+3. Creating platform-specific configuration (SDC, BUILD.bazel)
 4. Creating FakeRAM files if the design has embedded memories
 5. Testing the build
 
@@ -21,14 +21,12 @@ A fully configured design looks like:
 designs/
 ├── src/<design>/
 │   ├── <design>.v              # Release RTL (pre-generated)
-│   ├── verilog.mk              # Make-flow RTL selection
 │   ├── BUILD.bazel             # Bazel RTL source definition
 │   └── dev/
 │       ├── repo/               # Git submodule (upstream source)
 │       └── setup.sh            # Build script to generate Verilog
 ├── asap7/<design>/
-│   ├── BUILD.bazel             # Bazel flow config
-│   ├── config.mk               # Make flow config
+│   ├── BUILD.bazel             # Bazel target calling hightide_design()
 │   ├── constraint.sdc          # Timing constraints
 │   ├── pdn.tcl                 # (optional) Custom power delivery
 │   ├── io.tcl                  # (optional) Custom pin placement

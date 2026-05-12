@@ -23,7 +23,7 @@ designs/
 
 - **`defs.bzl`** defines `hightide_design()`, a thin wrapper around `orfs_flow()` that sets common defaults like `GDS_ALLOW_EMPTY = fakeram.*` and maps platform names to PDK labels.
 
-- **Each design's `BUILD.bazel`** calls `hightide_design()` with the design-specific parameters (utilization, density, SRAM files, etc.), mirroring what would be in a Make-flow `config.mk`.
+- **Each design's `BUILD.bazel`** calls `hightide_design()` with the design-specific parameters (utilization, density, SRAM files, etc.).
 
 ### Flow Stages
 
@@ -64,7 +64,6 @@ Each platform-specific design directory contains:
 | File | Required | Purpose |
 |------|----------|---------|
 | `BUILD.bazel` | Yes | Bazel target definition calling `hightide_design()` |
-| `config.mk` | Yes | Make-flow configuration (kept in sync with BUILD.bazel) |
 | `constraint.sdc` | Yes | Clock definitions and timing constraints |
 | `pdn.tcl` | No | Custom power delivery network (when default causes IR drop) |
 | `io.tcl` | No | Manual pin placement (when auto-placement causes congestion) |

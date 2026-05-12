@@ -39,27 +39,47 @@ The setup.sh must install all dependencies needed to convert the source HDL to p
 - **LiteX/Python designs**: Create Python venv, pip install all dependencies, generate Verilog (see `designs/src/liteeth/dev/setup.sh`)
 - **Veriloggen/Python designs**: Create Python venv, pip install dependencies including Veriloggen/NNgen, generate Verilog (see `designs/src/cnn/dev/setup.sh`)
 
-### 4. Create `designs/src/$0/verilog.mk`
+### 4. Create `designs/src/$0/BUILD.bazel`
 
-This file controls RTL selection between dev-generated and release Verilog. Use one of these patterns:
+This file declares RTL filegroups and a `select()` alias that switches
+between release and dev-generated Verilog. Follow this pattern (see
+`designs/src/lfsr/BUILD.bazel` for the simplest reference):
 
-**Simple single-file design:**
-```makefile
-ifneq ($(wildcard $(DEV_FLAG)),)
-export VERILOG_FILES = $(BENCH_DESIGN_HOME)/src/$0/dev/generated/$0.v
-else
-export VERILOG_FILES = $(BENCH_DESIGN_HOME)/src/$0/$0.v
-endif
+```python
+filegroup(
+    name = "rtl_release",
+    srcs = ["$0.v"],   # or multiple .v files
+)
+
+genrule(
+    name = "rtl_dev_gen",
+    srcs = [],
+    outs = ["dev_$0.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/$0/dev/repo >&2
+        bash designs/src/$0/dev/setup.sh >&2
+        cp designs/src/$0/dev/generated/$0.v $(location dev_$0.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)
 ```
 
-**Multi-file design (wildcard):**
-```makefile
-ifneq ($(wildcard $(DEV_FLAG)),)
-export VERILOG_FILES = $(wildcard $(BENCH_DESIGN_HOME)/src/$0/dev/repo/rtl/*.v)
-else
-export VERILOG_FILES = $(wildcard $(BENCH_DESIGN_HOME)/src/$0/*.v)
-endif
-```
+Designs with many generated files typically wrap the genrule output in
+a `filegroup` and glob over `dev/generated/**/*.v` — see
+`designs/src/snitch_cluster/BUILD.bazel` or
+`designs/src/bp_processor/BUILD.bazel` for richer examples.
 
 ### 5. Identify and create FakeRAM black-box memories
 
@@ -94,38 +114,50 @@ The same memory may need different LEF/LIB files per platform due to different m
 
 For each target platform (start with one, typically asap7), create `designs/<platform>/$0/` with:
 
-**`config.mk`** (required):
-```makefile
-export DESIGN_NAME = $0
-export PLATFORM    = <platform>
+**`BUILD.bazel`** (required):
+```python
+load("//:defs.bzl", "hightide_design")
 
--include $(BENCH_DESIGN_HOME)/src/$(DESIGN_NAME)/verilog.mk
-
-export SDC_FILE         = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/constraint.sdc
-export CORE_UTILIZATION = 40
-export CORE_ASPECT_RATIO = 1.0
-export CORE_MARGIN      = 4
-export PLACE_DENSITY    = 0.7
-export TNS_END_PERCENT  = 100
+hightide_design(
+    name = "$0",
+    top = "$0",          # set if the top module name differs from name
+    platform = "<platform>",
+    verilog_files = ["//designs/src/$0:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    arguments = {
+        "CORE_UTILIZATION": "40",
+        "CORE_ASPECT_RATIO": "1.0",
+        "CORE_MARGIN": "4",
+        "PLACE_DENSITY": "0.7",
+        "TNS_END_PERCENT": "100",
+    },
+)
 ```
 
-If the design uses FakeRAM, add:
-```makefile
-export ADDITIONAL_LEFS = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/sram/lef/*.lef
-export ADDITIONAL_LIBS = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/sram/lib/*.lib
-export GDS_ALLOW_EMPTY = fakeram*
-export MACRO_PLACE_HALO = 5 5
+If the design uses FakeRAM, add the LEF/LIB sources and bump halo:
+```python
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],   # filegroup over sram/lef/*.lef
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        ...
+        "MACRO_PLACE_HALO": "5 5",
+    },
 ```
+
+(`GDS_ALLOW_EMPTY = fakeram.*` is set by `hightide_design()` by default.)
 
 For large designs, consider:
-```makefile
-export SYNTH_HIERARCHICAL = 1
-export ABC_AREA = 1
-```
-
-If DESIGN_NAME differs from the source directory name (e.g., multi-variant designs), set:
-```makefile
-export DESIGN_NICKNAME = $0
+```python
+    arguments = {
+        ...
+        "SYNTH_HIERARCHICAL": "1",
+        "ABC_AREA": "1",
+    },
 ```
 
 **`constraint.sdc`** (required):
@@ -161,37 +193,34 @@ Most designs work fine with platform defaults. These are needed in specific situ
 
 ### 8. Generate and check in release RTL
 
-Run the dev flow to generate Verilog, then copy it to the release location:
+Run the dev RTL generator, then commit the result to the release location:
 ```bash
-# Generate via dev mode
-make DESIGN_CONFIG=./designs/<platform>/$0/config.mk dev
+# Generate via dev mode (initializes submodule + runs setup.sh)
+bazel build --define update_rtl=true //designs/src/$0:rtl
 
-# Copy generated RTL to release location
-cp designs/src/$0/dev/generated/$0.v designs/src/$0/$0.v
+# Copy generated RTL out of the bazel-bin tree to the release location
+cp bazel-bin/designs/src/$0/dev_$0.v designs/src/$0/$0.v
 ```
 
-### 9. Update the Makefile design list
-
-Add a comment line for the new design in the Makefile header:
-```makefile
-# DESIGN_CONFIG=./designs/<platform>/$0/config.mk
-```
-
-### 10. Test the flow
+### 9. Test the flow
 
 ```bash
-# Test with release RTL
-make DESIGN_CONFIG=./designs/<platform>/$0/config.mk
+# Build with release RTL (default)
+bazel build //designs/<platform>/$0:$0_final
 
-# Test with dev RTL generation
-make DESIGN_CONFIG=./designs/<platform>/$0/config.mk dev
+# Build with dev RTL regenerated from the upstream submodule
+bazel build --define update_rtl=true //designs/<platform>/$0:$0_final
 ```
 
-Use `./runorfs_ni.sh` prefix if running via Docker non-interactively.
+For incremental work, build a single stage instead of the full flow:
+```bash
+bazel build //designs/<platform>/$0:$0_synth
+bazel build //designs/<platform>/$0:$0_place
+```
 
-### 11. Port to additional platforms
+### 10. Port to additional platforms
 
 Repeat step 6 for nangate45 and sky130hd as needed. Each platform needs its own:
-- `config.mk` (adjust utilization/density for the technology)
+- `BUILD.bazel` (adjust utilization/density for the technology)
 - `constraint.sdc` (adjust clock period for the technology)
 - `sram/` directory with platform-specific FakeRAM files (if applicable)

@@ -123,10 +123,10 @@ if [ ! -f "$ADDRMAP_SVH" ]; then
     fi
 fi
 
-# ── Generate SRAM mapping (tc_sram.sv + sram_macros.mk) ─────────────
+# ── Generate SRAM mapping (tc_sram.sv) ──────────────────────────────
 SRAM_CFG="$DIR/generated/sram/fakeram.cfg"
 if [ -f "$SRAM_CFG" ]; then
-    echo "Generating tc_sram.sv and sram_macros.mk from fakeram.cfg..."
+    echo "Generating tc_sram.sv from fakeram.cfg..."
     python3 "$DIR/generate_sram_mapping.py" "$SRAM_CFG" "$DIR/generated"
 else
     echo "Warning: No fakeram.cfg found at $SRAM_CFG, skipping SRAM mapping generation"

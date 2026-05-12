@@ -43,7 +43,7 @@ Read each skill and check for these problems:
 
 ### Staleness
 - **Outdated paths**: Do file paths, script names, or directory structures still match reality?
-- **Removed tools**: Does the skill reference scripts or flows that no longer exist (e.g., Make flow if fully deprecated)?
+- **Removed tools**: Does the skill reference scripts or flows that no longer exist (e.g., the old Make/Docker ORFS flow, removed before 2026-05)?
 - **Stale design lists**: Does find-designs or CLAUDE.md list the current set of designs and platforms?
 - **Changed infrastructure**: Do K8s, Docker, or Bazel references match the current setup?
 

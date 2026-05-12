@@ -2,24 +2,23 @@
 
 ## Quick Start
 
-### Setup & Generate Cores
-Setup repo in `designs/src/liteeth` with:
+Build any liteeth variant through the Bazel flow:
+
 ```bash
-./setup.sh
+bazel build //designs/nangate45/liteeth/<variant>:<variant>_final
+# e.g.
+bazel build //designs/nangate45/liteeth/liteeth_mac_axi_mii:liteeth_mac_axi_mii_final
 ```
 
-Then run:
+The release RTL is pre-generated. To regenerate from the upstream
+liteeth submodule, run with `--define update_rtl=true`:
+
 ```bash
-make DESIGN_CONFIG=designs/nangate45/liteeth/<DESIGN_NAME>/config.mk
+bazel build --define update_rtl=true //designs/nangate45/liteeth/liteeth_mac_axi_mii:liteeth_mac_axi_mii_final
 ```
 
-### Run ASIC Flow
-```bash
-make DESIGN_CONFIG=designs/nangate45/liteeth/<DESIGN>/config.mk
-
-make DESIGN_CONFIG=designs/nangate45/liteeth/liteeth_mac_axi_mii/config.mk
-
-```
+This initializes the `designs/src/liteeth/dev/repo` submodule and
+runs `designs/src/liteeth/dev/setup.sh` to (re)generate the Verilog.
 
 ---
 

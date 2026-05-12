@@ -11,7 +11,7 @@ You are optimizing the PPA (power, performance, area) of the design at `designs/
 2. **Maximize clock frequency (Fmax)** — tighten the clock period to find the fastest achievable frequency
 3. **Maintain a clean flow** — zero DRC violations, no routing failures
 
-**Important:** HighTide is a benchmark suite — the RTL is a fixed input. Never suggest modifying the upstream Verilog/RTL. All optimizations must be scoped to flow parameters (config.mk), timing constraints (constraint.sdc), physical design files (io.tcl, pdn.tcl), and FakeRAM configuration.
+**Important:** HighTide is a benchmark suite — the RTL is a fixed input. Never suggest modifying the upstream Verilog/RTL. All optimizations must be scoped to flow parameters (BUILD.bazel `arguments`), timing constraints (constraint.sdc), physical design files (io.tcl, pdn.tcl), and FakeRAM configuration.
 
 **Key lesson: utilization and clock period are coupled.** Tighter clock constraints cause synthesis and repair_timing to insert more buffers, increasing the effective cell area. A design that fits at 80% utilization with a relaxed clock may overflow at 80% with an aggressive clock. Optimize utilization first at the current clock, then tighten the clock and re-check utilization.
 
@@ -69,9 +69,8 @@ bazel build //designs/<platform>/<design>:<design>_final
 - **GRT congestion** — check routing overflow counts (see Step 2d)
 
 **Read the design configuration:**
-- `designs/<platform>/<design>/config.mk`
+- `designs/<platform>/<design>/BUILD.bazel`
 - `designs/<platform>/<design>/constraint.sdc`
-- `designs/<platform>/<design>/BUILD.bazel` (if it exists)
 - `designs/<platform>/<design>/pdn.tcl` (if it exists)
 - `designs/<platform>/<design>/io.tcl` (if it exists)
 
@@ -83,7 +82,7 @@ The goal is to increase `CORE_UTILIZATION` as high as possible while maintaining
 
 ### 2a. Check current utilization headroom
 
-Compare the **target utilization** (from config.mk) to the **achieved utilization** (from the metrics report). If there is a large gap, the die is oversized.
+Compare the **target utilization** (from BUILD.bazel `arguments`) to the **achieved utilization** (from the metrics report). If there is a large gap, the die is oversized.
 
 Also check the placement density — if `PLACE_DENSITY` is much lower than the target utilization, placement may be too spread out.
 
@@ -91,7 +90,7 @@ Also check the placement density — if `PLACE_DENSITY` is much lower than the t
 
 Raise `CORE_UTILIZATION` in steps (e.g., +5% at a time). For each step:
 
-1. Update `CORE_UTILIZATION` in BUILD.bazel (or config.mk)
+1. Update `CORE_UTILIZATION` in BUILD.bazel `arguments`
 2. Adjust `PLACE_DENSITY` to match — it should be slightly above the utilization fraction (e.g., if utilization is 60%, density ~0.65-0.70)
 3. Run `bazel build //designs/<platform>/<design>:<design>_final`
 4. Check for:
@@ -135,7 +134,7 @@ A significant increase in flow runtime compared to the baseline is a strong indi
 
 ### 2f. Generate images to diagnose congestion
 
-When congestion blocks further utilization increases, generate heatmaps to identify specific problem areas. See `.claude/skills/shared/image-generation.md` for Tcl scripts and Docker commands. The most useful heatmaps:
+When congestion blocks further utilization increases, generate heatmaps to identify specific problem areas. See `.claude/skills/shared/image-generation.md` for Tcl scripts and the `xvfb-run` invocation. The most useful heatmaps:
 - **Placement density** — find regions with excessive cell density
 - **RUDY** — estimate routing demand before routing
 - **Routing congestion** — find actual routing bottlenecks after routing
@@ -182,7 +181,7 @@ Use `report_clock_min_period` from the finish report as the starting target, the
 5. If WNS is negative, back off — the previous period was close to optimal
 6. Converge when WNS is near zero (within ~0.01-0.05ns for asap7, ~0.05-0.1ns for nangate45/sky130hd)
 
-**Set `TNS_END_PERCENT = 100`** in config.mk to ensure the flow tries hard to close timing.
+**Set `TNS_END_PERCENT = 100`** in the design's `BUILD.bazel` `arguments` dict to ensure the flow tries hard to close timing.
 
 **Remember the util/clock coupling:** after tightening the clock significantly, re-check that the design still fits. CTS repair_timing inserts buffers that increase cell area. You may need to lower utilization when the clock gets aggressive.
 
@@ -210,7 +209,7 @@ Power is generally a secondary concern for benchmarking, but some quick wins:
 
 For visual diagnosis, generate images using OpenROAD's `save_image` command.
 
-See `.claude/skills/shared/image-generation.md` for the full Docker/Xvfb setup, Tcl scripts, and heatmap variants (routing congestion, placement density, RUDY, IR drop).
+See `.claude/skills/shared/image-generation.md` for the `xvfb-run` setup, Tcl scripts, and heatmap variants (routing congestion, placement density, RUDY, IR drop).
 
 ## Step 6: Iterate and Report
 
