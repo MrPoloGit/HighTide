@@ -2,7 +2,7 @@ library(fakeram_12x2048_1r1w) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-05-11 03:57:31Z";
+    date : "2026-05-13 14:52:35Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -82,17 +82,17 @@ library(fakeram_12x2048_1r1w) {
     type (fakeram_12x2048_1r1w_ADDRESS) {
         base_type : array ;
         data_type : bit ;
-        bit_width : 9;
-        bit_from : 8;
+        bit_width : 8;
+        bit_from : 7;
         bit_to : 0 ;
         downto : true ;
     }
 cell(fakeram_12x2048_1r1w) {
-    area : 211252.608;
+    area : 110213.203;
     interface_timing : true;
     memory() {
         type : ram;
-        address_width : 9;
+        address_width : 8;
         word_width : 12;
     }
     pin(r0_clk)   {
@@ -103,11 +103,11 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_clkslew) {
                 index_1 ("0.044, 1.110");
-                values ("19.287, 19.287")
+                values ("13.052, 13.052")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_clkslew) {
                 index_1 ("0.044, 1.110");
-                values ("19.287, 19.287")
+                values ("13.052, 13.052")
             }
         }
     }
@@ -120,11 +120,11 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_clkslew) {
                 index_1 ("0.044, 1.110");
-                values ("19.287, 19.287")
+                values ("13.052, 13.052")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_clkslew) {
                 index_1 ("0.044, 1.110");
-                values ("19.287, 19.287")
+                values ("13.052, 13.052")
             }
         }
     }
@@ -144,16 +144,16 @@ cell(fakeram_12x2048_1r1w) {
                 index_1 ("0.044, 1.110");
                 index_2 ("0.005, 0.500");
                 values ( \
-                  "0.666, 0.666", \
-                  "0.666, 0.666" \
+                  "0.598, 0.598", \
+                  "0.598, 0.598" \
                 )
             }
             cell_fall(fakeram_12x2048_1r1w_mem_out_delay_template) {
                 index_1 ("0.044, 1.110");
                 index_2 ("0.005, 0.500");
                 values ( \
-                  "0.666, 0.666", \
-                  "0.666, 0.666" \
+                  "0.598, 0.598", \
+                  "0.598, 0.598" \
                 )
             }
             rise_transition(fakeram_12x2048_1r1w_mem_out_slew_template) {
@@ -212,11 +212,11 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
     }
@@ -266,11 +266,11 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
     }
@@ -320,11 +320,11 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
     }
@@ -380,22 +380,22 @@ cell(fakeram_12x2048_1r1w) {
             when : "(! (w0_we_in) )";
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
         internal_power(){
             when : "(w0_we_in)";
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
     }
@@ -446,11 +446,11 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
     }
@@ -501,15 +501,15 @@ cell(fakeram_12x2048_1r1w) {
         internal_power(){
             rise_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
             fall_power(fakeram_12x2048_1r1w_energy_template_sigslew) {
                 index_1 ("0.044, 1.110");
-                values ("0.193, 0.193")
+                values ("0.131, 0.131")
             }
         }
     }
-    cell_leakage_power : 333.391;
+    cell_leakage_power : 175.802;
 }
 
 }

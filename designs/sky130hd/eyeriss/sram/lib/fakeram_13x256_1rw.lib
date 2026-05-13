@@ -2,7 +2,7 @@ library(fakeram_13x256_1rw) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-05-11 03:57:33Z";
+    date : "2026-05-13 14:52:36Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
