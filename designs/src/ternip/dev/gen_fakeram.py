@@ -19,12 +19,11 @@ import os
 #
 #   vector_registers.pipelined_mem (16 × 4096) → 8 × fakeram7_512x16  (depth-banked)
 #   tmatmul.exportvector           (16 × 1024) → 2 × fakeram7_512x16  (depth-banked)
-#   tmatmul.importvector           (1024 × 16) → 8 × fakeram7_16x128  (width-banked)
+#   tmatmul.importvector           (1024 × 16) → flip-flops          (too small for a macro)
 #
 # fakeram7_512x16 is shared between the two depth-banked memories.
 SRAM_SIZES = [
     (16, 512),   # 8 Kb bank — depth-bank for the two 16-bit-wide memories
-    (128, 16),   # 2 Kb bank — width-bank for the 1024-bit importvector
 ]
 
 PLATFORM_PARAMS = {

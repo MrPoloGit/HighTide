@@ -103,7 +103,7 @@ end
 //
 //   (16, 4096) → 8 × fakeram7_512x16  (depth-banked, 8 Kb per bank)
 //   (16, 1024) → 2 × fakeram7_512x16  (depth-banked, 8 Kb per bank)
-//   (1024, 16) → 8 × fakeram7_16x128  (width-banked, 2 Kb per bank)
+//   (1024, 16) → flip-flop register file (16 entries is too small for a macro)
 //
 // Depth banking: addr[high] selects which bank's ce_in fires; the bank's
 // rd_out is muxed back into read_data_q2 using request_addr_q2 (the
@@ -166,18 +166,18 @@ generate
         end
         assign read_data_q2 = bank_rd_out[bank_sel_q2];
     end else if (DATA_WIDTH == 1024 && NUM_ENTRIES == 16) begin : gen_sram
-        localparam int BANK_WIDTH = 128;
-        localparam int NUM_BANKS  = 8;  // 1024 / 128
-
-        for (genvar b = 0; b < NUM_BANKS; b++) begin : gen_bank
-            fakeram7_16x128 sram (
-                .rw0_clk(clk_i),
-                .rw0_ce_in(fakeram_ce),
-                .rw0_we_in(fakeram_we),
-                .rw0_addr_in(request_addr_q1),
-                .rw0_wd_in(request_w_data_q1[BANK_WIDTH*b +: BANK_WIDTH]),
-                .rw0_rd_out(read_data_q2[BANK_WIDTH*b +: BANK_WIDTH])
-            );
+        // 16 entries is too small for a macro; use flip-flops with the same
+        // 1-cycle read latency so the pipeline timing is unchanged.
+        // ram_style="registers" tells yosys not to infer this as RAM.
+        (* ram_style = "registers" *)
+        reg [DATA_WIDTH-1:0] mem_ff [0:NUM_ENTRIES-1];
+        always_ff @(posedge clk_i) begin
+            if (!stall2 && write_valid_q1)
+                mem_ff[request_addr_q1] <= request_w_data_q1;
+        end
+        always_ff @(posedge clk_i) begin
+            if (!stall2 && read_valid_q1)
+                read_data_q2 <= mem_ff[request_addr_q1];
         end
     end
 endgenerate
