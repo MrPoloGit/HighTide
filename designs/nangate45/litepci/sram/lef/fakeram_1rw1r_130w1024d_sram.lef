@@ -1,7 +1,7 @@
 VERSION 5.7 ;
 BUSBITCHARS "[]" ;
-MACRO fakeram45_1rw1r_130w1024d
-  FOREIGN fakeram45_1rw1r_130w1024d 0 0 ;
+MACRO fakeram_1rw1r_130w1024d_sram
+  FOREIGN fakeram_1rw1r_130w1024d_sram 0 0 ;
   SYMMETRY X Y R90 ;
   SIZE 603.820 BY 571.200 ;
   CLASS BLOCK ;
@@ -4304,6 +4304,6 @@ MACRO fakeram45_1rw1r_130w1024d
     LAYER OVERLAP ;
     RECT 0 0 603.820 571.200 ;
   END
-END fakeram45_1rw1r_130w1024d
+END fakeram_1rw1r_130w1024d_sram
 
 END LIBRARY
