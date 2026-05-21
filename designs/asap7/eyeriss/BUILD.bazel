@@ -30,13 +30,14 @@ hightide_design(
         "SYNTH_HIERARCHICAL": "1",
         # PPA-tuned: the prior 5-ns / util-40 build hit Fmax 418 MHz with
         # +2607 ps of setup headroom and 14 % GRT congestion at 0
-        # overflow.  Push clock to 2.5 ns (target ~400 MHz) and util to 55.
-        # The banks=8 macros (aspect ≤ 1.3 vs. the 9:1 originals) free up
-        # placement so the floorplan can tighten without re-triggering
-        # MPL-0040 or congestion.
-        "CORE_UTILIZATION": "55",
+        # overflow.  Halve the clock to 2.5 ns (target ~400 MHz) and push
+        # util 40 → 45.  An earlier sweep at util=55 / halo=4 hit MPL-0040
+        # — at that density macros + halo occupied 97 % of the floorplan
+        # and the annealer had no slack to find a valid solution.  Keep
+        # halo at the original 5 µm.
+        "CORE_UTILIZATION": "45",
         "PLACE_DENSITY_LB_ADDON": "0.20",
-        "MACRO_PLACE_HALO": "4 4",
+        "MACRO_PLACE_HALO": "5 5",
         "TNS_END_PERCENT": "100",
         # ODB-1200 in CTS repair_timing — split_load load-list invalidation
         # trips InsertBufferBeforeLoads on the GLB iact SRAMs (OpenROAD #75).
