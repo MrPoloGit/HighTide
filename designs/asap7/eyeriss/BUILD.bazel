@@ -29,13 +29,16 @@ hightide_design(
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
         # PPA-tuned: the prior 5-ns / util-40 build hit Fmax 418 MHz with
-        # +2607 ps of setup headroom and 14 % GRT congestion at 0
-        # overflow.  Halve the clock to 2.5 ns (target ~400 MHz) and push
-        # util 40 → 45.  An earlier sweep at util=55 / halo=4 hit MPL-0040
-        # — at that density macros + halo occupied 97 % of the floorplan
-        # and the annealer had no slack to find a valid solution.  Keep
-        # halo at the original 5 µm.
-        "CORE_UTILIZATION": "45",
+        # +2607 ps of setup headroom.  Halve the clock to 2.5 ns (target
+        # ~400 MHz) but keep util/halo at the original 40 / 5 — earlier
+        # sweeps at util=55/halo=4 and util=45/halo=5 both hit MPL-0040
+        # on ClusterGroup_0_0 because the hierarchical macro placer hands
+        # each cluster a sub-region that gets over-packed.  RTLMP's
+        # MPL-0055 auto-relaxation went up to 0.675 effective utilization
+        # without finding a solution — bumping the global util just
+        # tightens the per-cluster fence, it doesn't help here.  The
+        # PPA win is the clock; util tightening would need hand-placement.
+        "CORE_UTILIZATION": "40",
         "PLACE_DENSITY_LB_ADDON": "0.20",
         "MACRO_PLACE_HALO": "5 5",
         "TNS_END_PERCENT": "100",
