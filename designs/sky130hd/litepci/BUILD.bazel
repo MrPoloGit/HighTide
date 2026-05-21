@@ -40,17 +40,21 @@ hightide_design(
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_SKY130HD_CELLS",
-        # Round-2 PPA tune: 45%→55% util (GRT peak at 45% was 19% on met2 —
-        # plenty of room).  pcie_us LEF settled at 1000×1000 µm (885 µm pin
-        # column + margin).
+        # Real-FakeRAM build: dev/inline_fakeram.py wires the 20 large
+        # DMA / TLP memories to explicit fakeram instances so STA sees
+        # real reg-to-reg paths.  Util / density / halo carried over
+        # from the mocked-build route-fix iteration (util 30, halo 100)
+        # as a conservative starting point — sky130hd's coarse pitch +
+        # 1000×1000 pcie_us + 20 large FakeRAMs is the hardest of the
+        # three platforms to route.  Will retune after first real-timing
+        # measurement.
         "CORE_UTILIZATION": "30",
         "PLACE_DENSITY": "0.40",
         "MACRO_PLACE_HALO": "100 100",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # See asap7 BUILD.bazel — flow does not yet patch litepcie's
-        # inferred memories to explicit fakeram instances.
-        "SYNTH_MOCK_LARGE_MEMORIES": "1",
-        "SYNTH_MEMORY_MAX_BITS": "4096",
+        # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; skip the
+        # post-GRT repair_timing block.  Same workaround as asap7 litepci.
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )
