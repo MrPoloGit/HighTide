@@ -1,0 +1,44 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Eyeriss v2 sparse-CNN accelerator on nangate45. Same RTL as asap7 — 2x2
+# cluster group array with 9 PEs per cluster — but FakeRAMs are regenerated
+# for the 45nm metal stack via designs/nangate45/eyeriss/sram/fakeram_nangate45.cfg.
+hightide_design(
+    name = "eyeriss",
+    top = "TOP",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/eyeriss:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        # PPA-tuned: prior 5-ns / util-30 build hit +0.63 ns of setup
+        # headroom (Fmax 228 MHz) at 8.6 % GRT congestion / 0 overflow.
+        # Tighten clock to 4.5 ns and util to 38; drop halo 20→15 (PDN-0179
+        # was originally fixed at ≥ 15 µm, 20 was margin).
+        "CORE_UTILIZATION": "38",
+        "PLACE_DENSITY_LB_ADDON": "0.15",
+        "MACRO_PLACE_HALO": "15 15",
+        "TNS_END_PERCENT": "100",
+        # Same ODB-1200 pattern as asap7 — drop split_load from the move
+        # sequence to keep the rest of repair_timing active.
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # repair_timing non-convergence on the inter-cluster psum chains
+        # (CLAUDE.md table; same pathology as asap7).
+        "SKIP_INCREMENTAL_REPAIR": "1",
+        "SKIP_LAST_GASP": "1",
+    },
+)

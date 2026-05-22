@@ -17,11 +17,22 @@ spec:
           set -e
           git clone --single-branch --branch __BRANCH__ --depth=1 \
             https://github.com/VLSIDA/HighTide.git /repo
-          # Only the bazel-orfs submodule is needed for the build.
-          # designs/src/<d>/dev/repo and bsg_fakeram submodules are used
-          # only by update-rtl / generate-sram paths.
           cd /repo
           git submodule update --init --depth=1 bazel-orfs
+          # Init this design's dev/ submodules too (under designs/src/<d>/dev/*).
+          # Most designs have a committed rtl_release filegroup and don't need
+          # this, but designs whose Bazel targets reference dev/repo/...
+          # directly (e.g. ternip's BSG-driven flow) need a cold-build to find
+          # them on disk.  Cached actions ignore the submodule contents.
+          DESIGN=$(echo "__BAZEL_TARGET__" | sed -n 's|^//designs/[^/]*/\([^:]*\):.*|\1|p')
+          if [ -n "$DESIGN" ]; then
+            git config --file .gitmodules --get-regexp \
+                "submodule\\.designs/src/${DESIGN}/dev/.*\\.path" 2>/dev/null \
+              | awk '{print $2}' \
+              | while IFS= read -r sm; do
+                  [ -n "$sm" ] && git submodule update --init --depth=1 "$sm" || true
+                done
+          fi
         volumeMounts:
         - name: repo
           mountPath: /repo
