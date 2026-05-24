@@ -24,5 +24,6 @@ hightide_design(
         "PLACE_DENSITY": "0.35",
         "MACRO_PLACE_HALO": "2 2",
         "SKIP_CTS_REPAIR_TIMING": "1",
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

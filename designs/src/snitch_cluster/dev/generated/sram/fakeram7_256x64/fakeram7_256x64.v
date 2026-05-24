@@ -2,7 +2,6 @@ module fakeram7_256x64
 (
    rw0_wd_in,
    rw0_we_in,
-   rw0_wmask_in,
    rw0_rd_out,
    rw0_clk,
    rw0_ce_in,
@@ -19,7 +18,6 @@ module fakeram7_256x64
    output reg [BITS-1:0]    rw0_rd_out;
    input                    rw0_we_in;
    input  [BITS-1:0]        rw0_wd_in;
-   input  [0:0]             rw0_wmask_in;
 
    reg    [BITS-1:0]        mem [0:WORD_DEPTH-1];
    integer j;
@@ -36,8 +34,7 @@ module fakeram7_256x64
             $display("warning: rw0_ce_in=1, rw0_we_in is %b, rw0_addr_in = %x in fakeram7_256x64", rw0_we_in, rw0_addr_in);
          end
          else if (rw0_we_in) begin 
-            if (rw0_wmask_in[0])
-               mem[rw0_addr_in][0:0] <= (rw0_wd_in[0:0]);
+            mem[rw0_addr_in] <= rw0_wd_in;
          end
          // Read Port
          rw0_rd_out <= mem[rw0_addr_in];
@@ -58,7 +55,6 @@ module fakeram7_256x64
       $period    (posedge rw0_clk,            0,    notifier);
       $setuphold (posedge rw0_clk, rw0_we_in,     0, 0, notifier);
       $setuphold (posedge rw0_clk, rw0_wd_in,     0, 0, notifier);
-      $setuphold (posedge rw0_clk, rw0_wmask_in,     0, 0, notifier);
       $setuphold (posedge rw0_clk, rw0_ce_in,     0, 0, notifier);
       $setuphold (posedge rw0_clk, rw0_addr_in,   0, 0, notifier);
 
