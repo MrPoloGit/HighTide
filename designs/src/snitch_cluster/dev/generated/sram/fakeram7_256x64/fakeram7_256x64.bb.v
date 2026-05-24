@@ -2,7 +2,6 @@ module fakeram7_256x64
 (
    rw0_wd_in,
    rw0_we_in,
-   rw0_wmask_in,
    rw0_rd_out,
    rw0_clk,
    rw0_ce_in,
@@ -19,6 +18,5 @@ module fakeram7_256x64
    output reg [BITS-1:0]    rw0_rd_out;
    input                    rw0_we_in;
    input  [BITS-1:0]        rw0_wd_in;
-   input  [0:0]             rw0_wmask_in;
 
 endmodule
