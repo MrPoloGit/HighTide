@@ -4,19 +4,26 @@ load("//designs/src/bp_processor:defs.bzl", "BP_COMMON_ARGS")
 _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
-    # sky130hd port (140 macros + ~710k insts). Stdcell utilization stays
-    # very low (~12% at util=30), so the limiter is pin-cluster congestion
-    # at the icache `data_mems[*]` macros, not global density. First pass
-    # at halo=60 / lb_addon=0.10 ended GRT with 35 overflow-by-1 on
-    # met2/met4 right next to the cache macros. Bump halo and lb_addon to
-    # give the router more channel space at the macro edges; the bigger
-    # die that CORE_UTILIZATION carves out absorbs both (nangate45's MPL-0040
-    # at halo=60 was at util=25/DIE=2500, much tighter than this).
-    "CORE_UTILIZATION": "30",
+    # sky130hd port (140 macros + ~710k insts). RTLMP's pin-edge-blind,
+    # mixed-orientation clustering wedged adjacent icache `data_mems[*]`
+    # macros into met2-pin escape collisions (capacity:0 overflow on a
+    # large die, then GRT-0229 saturation when the halo was bumped). Same
+    # failure shape as cnn-sky130hd / NVDLA partition_c. Fix: fixed-grid
+    # MACRO_PLACEMENT_TCL (all macros R0, channel under each row) so every
+    # macro's bottom pin edge faces clear routing space; macros set FIRM
+    # so the post-source rtl_macro_placer leaves them alone. The grid
+    # needs ~7600 µm of y to fit 10 rows + channels, so size the die at
+    # 8000 µm square (CORE_UTILIZATION=30's 5887 µm core couldn't host
+    # the grid). Regenerate the placement file:
+    #   python3 tools/gen_macro_grid.py \
+    #     designs/src/bp_processor/dev/generated/bp_uno_sky130hd_macros.txt \
+    #     designs/sky130hd/bp_processor/bp_uno/macro_placement.tcl \
+    #     --gap-x 250 --chan 450
+    "DIE_AREA": "0 0 8000 8000",
+    "CORE_AREA": "20 20 7980 7980",
     "PLACE_PINS_ARGS": "-min_distance 20 -min_distance_in_tracks",
-    "MACRO_PLACE_HALO": "80 80",
     "MACRO_BLOCKAGE_HALO": "0.5",
-    "PLACE_DENSITY_LB_ADDON": "0.20",
+    "PLACE_DENSITY_LB_ADDON": "0.10",
 })
 
 hightide_design(
@@ -30,6 +37,7 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": ["//designs/sky130hd/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/sky130hd/bp_processor:sram_libs"],
+        "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
     },
     arguments = _ARGS,
     stage_data = {"synth": ["//designs/src/bp_processor:rtl_data"]},
