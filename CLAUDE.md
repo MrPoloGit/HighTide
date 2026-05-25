@@ -86,6 +86,7 @@ Newly finishing after the wd_in-fix recovery (verified locally, 2026-05-16):
 - **sky130hd**: `cnn` (fixed-grid `macro_placement.tcl` + `PLACE_DENSITY=0.20` + halo 300 — full GDS, 0 route DRC)
 - **nangate45**: `cnn`; **asap7/nangate45**: NVDLA `partition_c` (local sweep `6_final`)
 - **sky130hd**: `bp_uno` (2026-05-26 — fixed-grid `macro_placement.tcl` at DIE=8000×8000, 140 macros R0+FIRM; WNS +4.4 ns, 0 DRC). `6_final.odb` is 2.9 GB — Cloudflare-local-build only.
+- **asap7**: `NyuziProcessor` (2026-05-25) — added custom `pdn.tcl` (copy of gemmini's) to fix PSM-0069 VDD connectivity; default platform PDN was too sparse to survive macro-pin obstructions (983 PDN-0195 via-removals → 18k unconnected fillers). SDC relaxed to 3800 ps (Fmax 268 MHz)
 
 Not yet finishing (not cached):
 - **asap7**: floonoc, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partition p
