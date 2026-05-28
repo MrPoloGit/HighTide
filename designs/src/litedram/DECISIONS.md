@@ -22,6 +22,10 @@ This is the first memory-controller design in the suite. One variant only — `S
 - **`SYNTH_HIERARCHICAL = 1`** — required on every platform. With flat synth, abc inlines each `TRELLIS_IO` and the resulting INV cell (from the tristate optimization) collides with the `inout sdram_dq[*]` declaration. Hierarchical synth keeps each `TRELLIS_IO` as a module boundary so the multi-driver check sees only one driver per pin. Same approach as `liteeth_udp_raw_rgmii` for its `rgmii_mdio` MDIO pin.
 - **`SKIP_INCREMENTAL_REPAIR = 1`** — required on asap7. The post-GRT `repair_timing` pass plateaus on 170 setup-violating endpoints (all `user_port_axi_0_*id[*]` AXI ID outputs and `user_rst`) — WNS stuck at −935 ps after 700+ iters at a 6 ns clock target, with the resizer making no per-iter progress. This is the RTL-bounded-endpoint pattern; same workaround as `snitch_cluster` (see CLAUDE.md workarounds table). Detail-route still does its own hold-repair; the final WNS shows up in the report.
 
+## Upstream history
+
+- **2026-05-28**: bumped `dev/repo` `744b143f` → `c7bcb5dc` (2 commits: `916b8b6` Wishbone narrow-burst coalescing in frontend; `c7bcb5d` gw5ddrphy latency align — gw5 unused by us). Re-regenerated `litedram_core.v`; patch `sdram_dq input→inout` re-applied. Builds clean on all 3 platforms. Closes #150.
+
 ## asap7
 
 **Status**: setup-clean to GDS (PPA-tuned 2026-05-12)
