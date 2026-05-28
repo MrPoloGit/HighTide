@@ -73,7 +73,7 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 |----------|------|---------|
 | asap7 | 7nm academic | coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth, NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
 | nangate45 | 45nm | coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth, bp_processor (bp_uno, bp_quad), cnn |
-| sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth, cnn |
+| sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth, cnn, bp_processor (bp_uno) |
 
 #### Build status (as of 2026-05-11)
 
@@ -85,6 +85,7 @@ Designs reaching `_final` (cached on remote build cache):
 Newly finishing after the wd_in-fix recovery (verified locally, 2026-05-16):
 - **sky130hd**: `cnn` (fixed-grid `macro_placement.tcl` + `PLACE_DENSITY=0.20` + halo 300 — full GDS, 0 route DRC)
 - **nangate45**: `cnn`; **asap7/nangate45**: NVDLA `partition_c` (local sweep `6_final`)
+- **sky130hd**: `bp_uno` (2026-05-26 — fixed-grid `macro_placement.tcl` at DIE=8000×8000, 140 macros R0+FIRM; WNS +4.4 ns, 0 DRC). `6_final.odb` is 2.9 GB — Cloudflare-local-build only.
 
 Not yet finishing (not cached):
 - **asap7**: floonoc, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partition p
@@ -173,6 +174,7 @@ These go into `arguments = { ... }` of `hightide_design()`.
 The remote cache is self-hosted `bazel-remote` fronted by a **Cloudflare Tunnel** whose free tier caps request bodies at **100 MB**. ORFS emits multi-100-MB stage ODBs (`2_floorplan.odb`, `3_place.odb`) for the largest designs; even with `--remote_cache_compression` (zstd) the very biggest still exceed the ceiling, so their `_final` results **fail to upload and never get cached remotely** — every k8s run rebuilds them from scratch and re-fails the upload. Build these locally instead so they at least populate the local `~/.cache/bazel-disk-cache`:
 
 - **`bp_quad`** (asap7, nangate45) — biggest design (560 macros, 64–160 Gi RAM, 14 h+); k8s-hostile.
+- **`bp_uno`** (sky130hd) — 140 macros + 7.6 M cells; `6_final.odb` 2.9 GB. asap7/nangate45 `bp_uno` upload OK; sky130hd's coarser pitches inflate the routed netlist past the ceiling.
 - **`NVDLA/partition_c`** (asap7, nangate45, sky130hd) — the named offender in `.bazelrc`. The other NVDLA partitions (a/m/o/p) stay under the ceiling with zstd and run fine on k8s.
 - **`cnn`** (nangate45, sky130hd) — 65 macros each.
 
