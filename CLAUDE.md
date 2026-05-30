@@ -75,27 +75,26 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 | nangate45 | 45nm | coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth, bp_processor (bp_uno, bp_quad), cnn |
 | sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth, cnn, bp_processor (bp_uno) |
 
-#### Build status (as of 2026-05-11)
+#### Build status
 
-Designs reaching `_final` (cached on remote build cache):
-- **asap7**: coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth, NVDLA partitions a/m/o
+Per-design close history, knobs, QoR, and known issues live in **`designs/src/<design>/DECISIONS.md`**, with one `## <platform>` section per technology. Update there, not here — this index just tracks which (design, platform) pairs are reaching `_final`.
+
+Reaching `_final` (cached on remote build cache):
+- **asap7**: coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth, NVDLA partitions a/m/o, NyuziProcessor
 - **nangate45**: coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth
 - **sky130hd**: gemmini, lfsr, litedram, minimax, sha3, liteeth, NVDLA partitions a/m/o/p
 
-Newly finishing after the wd_in-fix recovery (verified locally, 2026-05-16):
-- **sky130hd**: `cnn` (fixed-grid `macro_placement.tcl` + `PLACE_DENSITY=0.20` + halo 300 — full GDS, 0 route DRC)
-- **nangate45**: `cnn`; **asap7/nangate45**: NVDLA `partition_c` (local sweep `6_final`)
-- **sky130hd**: `bp_uno` (2026-05-26 — fixed-grid `macro_placement.tcl` at DIE=8000×8000, 140 macros R0+FIRM; WNS +4.4 ns, 0 DRC). `6_final.odb` is 2.9 GB — Cloudflare-local-build only.
-- **asap7**: `NyuziProcessor` (2026-05-27) — added custom `pdn.tcl` (copy of gemmini's) to fix PSM-0069 VDD connectivity; default platform PDN was too sparse to survive macro-pin obstructions (983 PDN-0195 via-removals → 18k unconnected fillers). PPA-tuned to `CORE_UTILIZATION=65` / `clk_period=3000 ps` (Fmax 274 MHz, core 1170k µm² — −15% area and +27% Fmax vs initial close). At util 65 the denser place exposed ODB-0445 in post-GRT `repair_timing`, worked around with `SKIP_INCREMENTAL_REPAIR=1`
+Reaching `_final` locally only (over the Cloudflare-tunnel 100 MB cache-upload ceiling — see the local-build list below):
+- **asap7**: NVDLA partition_c
+- **nangate45**: cnn, NVDLA partition_c
+- **sky130hd**: cnn, bp_uno
 
-Not yet finishing (not cached):
-- **asap7**: floonoc, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partition p
+Not yet finishing:
+- **asap7**: floonoc, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partition_p
 - **nangate45**: bp_processor (bp_uno, bp_quad)
-- **sky130hd**: NVDLA partition c — global-placement plateau (~18 h on `3_place`, the documented GP overflow plateau); needs the same manual-grid `macro_placement.tcl` treatment cnn-sky130hd just got
+- **sky130hd**: NVDLA partition_c (global-placement plateau — see `designs/src/NVDLA/DECISIONS.md`)
 
-`sky130hd/NVDLA/partition_c` global placement plateaus at overflow ~0.31 (target 0.10) — 84 macros at sky130hd's coarse pitches create local density hot spots near macro pin clusters that the placer can't smooth out. Loosening `CORE_UTILIZATION` / `PLACE_DENSITY_LB_ADDON` / `MACRO_PLACE_HALO` to match working partitions doesn't fix it. Likely needs a manual `macros.tcl` to spread the 84 SRAMs into a regular grid.
-
-Use `tools/fetch_cache.sh` to pull cached `_final` results from the remote cache; designs marked NOT CACHED there are the not-yet-finishing set above.
+Use `tools/fetch_cache.sh` to pull cached `_final` results from the remote cache; designs in the local-only / not-finishing lists above aren't on it.
 
 ### Output Directories
 

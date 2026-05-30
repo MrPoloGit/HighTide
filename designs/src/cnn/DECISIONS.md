@@ -35,3 +35,45 @@ sky130hd grew ~10× because:
 CACTI's optimizer minimises cycle time for an L3-cache-like target; with cnn's 16-bit-wide × 32K-deep memory and sky130hd's bitcell geometry, that lands at column-mux=1 and a 21 mm × 0.7 mm macro (30:1 aspect) — usable for area-estimate cells in a research context, not a real floorplan. The bsg_fakeram fork's analytical formula uses dynamic column muxing to land near 1.5:1 aspect and matches the same overhead model used for asap7.
 
 nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
+
+## asap7
+
+**Status**: finishing.
+
+`hightide_design()` with `CORE_UTILIZATION=60`, `PLACE_DENSITY=0.40`. Default RTLMP places the four `fakeram_w16_l32768` macros. **MPL-0040** workaround required — see CLAUDE.md bug table: `macros.tcl` pre-places the fakeram macros (FIRM) before RTLMP runs.
+
+## nangate45
+
+**Status**: finishing (2026-05-16).
+
+Fixed `DIE_AREA = 0 0 4502 4277` (auto-sizing didn't leave enough room for the 4 large macros). All 367 IO pins force-placed onto the bottom edge with `PLACE_PINS_ARGS` to avoid clustering and shorten routes to the stdcell band below the four `w16_l32768` macros at the top of the die. Default RTLMP for macro placement.
+
+## sky130hd
+
+**Status**: finishing (2026-05-16, with R4 banks experiment 2026-05-20).
+
+This was the hardest port — full RTL→GDS only landed after a stack of three independent fixes:
+
+1. **`wd_in` LEF direction fix** (bsg_fakeram `c83ecb4` / HighTide `044c02b9`) — killed the "net1337 1964-fanout" short, a LEF bug masquerading as real fanout.
+2. **Fixed-grid `MACRO_PLACEMENT_TCL`** (all macros R0, channel below every row) — every fakeram puts all signal pins on its bottom met2 edge; RTLMP was pin-edge-blind and clustered them so escape lanes collided. The hand grid faces every pin edge onto a clear channel.
+3. **`PLACE_DENSITY=0.20` + `MACRO_PLACE_HALO=300`** — spread the 28.6% std-cell utilization across the near-empty die instead of clumping them onto the macro pin edges.
+
+### R4 banks experiment (2026-05-20)
+
+After the close, the four 32K macros were sub-banked via cfg (`w16_l32768 banks=16`, `w16_l8192 banks=4`) — `4.93 × 4.01 mm → 1.23 × 1.00 mm` per macro (**−94% macro area**). With tiny macros the floorplan was retuned:
+
+| Knob | Before | After (current) |
+|---|---|---|
+| `DIE_AREA` | `0 0 20000 20000` (400 mm²) | `0 0 7000 7000` (49 mm²) |
+| `PLACE_DENSITY` | 0.20 | 0.40 |
+| `MACRO_PLACE_HALO` | 300 | 50 |
+| `MACRO_PLACEMENT_TCL` | hand grid (still required pre-R4) | dropped — RTLMP re-derives |
+
+The hand-placed coordinates from #2 above were valid for the old enormous macros and are obsolete now. Inline rationale lives in `designs/sky130hd/cnn/BUILD.bazel`.
+
+### Decisions
+
+- **2026-05-16**: full RTL→GDS, 0 GRT overflow on every layer (met2 1.46% usage), detail route 100% with 0 violations.
+- **2026-05-20** (R4): banks experiment shrunk macros 94% — die from 400 mm² to 49 mm².
+
+cnn-asap7 and cnn-nangate45 pass with RTLMP; only sky130's coarse pitch needed the hand grid + spread.
