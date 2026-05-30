@@ -42,3 +42,21 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 | m | – | – |
 | o | 18x128, 8x256, 4x256, 7x256, 66x64, 15x80, 22x60, 32x128 | 9x80 |
 | p | 16x160, 65x160, 14x80, 66x80 | – |
+
+## asap7
+
+**Status**: partitions `a`, `m`, `o` cached on remote build cache; partition `c` finishing locally (local sweep `6_final`, 2026-05-16); partition `p` not yet finishing.
+
+## nangate45
+
+**Status**: same shape as asap7 — partitions `a`, `m`, `o` cached; partition `c` finishing locally (2026-05-16); partition `p` not yet finishing.
+
+## sky130hd
+
+**Status**: partitions `a`, `m`, `o`, `p` cached on remote build cache; **partition `c` does not finish** — global-placement plateau.
+
+### partition_c plateau
+
+Global placement plateaus at overflow ~0.31 (target 0.10). 84 macros at sky130hd's coarse pitches create local density hot spots near macro pin clusters that the placer can't smooth out. Loosening `CORE_UTILIZATION` / `PLACE_DENSITY_LB_ADDON` / `MACRO_PLACE_HALO` to match the other partitions doesn't fix it; ~18 h on `3_place` is the documented GP overflow plateau.
+
+Likely fix: a manual `macros.tcl` to spread the 84 SRAMs into a regular grid — same treatment that cnn-sky130hd ([[../cnn/DECISIONS.md]]) and bp_uno-sky130hd ([[../bp_processor/DECISIONS.md]]) needed.
