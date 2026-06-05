@@ -58,6 +58,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ### Decisions
 - **2026-04-26 `6d6f2dc2`**: util dropped to 20%, density set explicitly to 0.15 to relieve sky130hd routing congestion on this macro-heavy NPU.
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: reaches `_final`; 148 566 logic cells (−1.2 % vs baseline 150 363), util 23.1 %. Reported WNS +507 → −269 ps on the 30 ns clock — that is −0.9 % of the clock period (achievable Fmax change ~2.3 %, within tolerance) and the worst path is a **reset-removal check** (`csr/resetReg → mcycle[59]`), not a functional setup path. Accepted as-is; no SDC/RTL change (recovering it would require a reset-removal false-path = constraint change).
 
 ### Known issues / open questions
-- None.
+- Reported WNS marginally negative (−269 ps, a reset-removal check ≈ −0.9 % of period) after the 2026-06 upgrade; design routes and reaches 6_final with area unchanged.
