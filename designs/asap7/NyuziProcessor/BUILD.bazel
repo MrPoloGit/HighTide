@@ -19,7 +19,9 @@ hightide_design(
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
         "PDN_TCL": [":pdn.tcl"],
-        "PRE_CTS_TCL": [":pre_cts.tcl"],
+        # PRE_CTS_TCL (pre_cts.tcl) reset dbSourceType TIMING->NETLIST to
+        # work around CTS-0105 (OpenROAD #10177, closed 2026-05-21); removed
+        # on the bazel-orfs 553c1c3 / OpenROAD 299f3015 upgrade.
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
@@ -27,23 +29,10 @@ hightide_design(
         "PLACE_DENSITY_LB_ADDON": "0.22",
         "MACRO_PLACE_HALO": "6 6",
         "TNS_END_PERCENT": "100",
-        # ODB-1200 at CTS ("cts.tcl, 82 ODB-1200", InsertBufferBeforeLoads
-        # on a stale load list). Tried the gemmini-style targeted fix
-        # (drop `split_load` from SETUP_MOVE_SEQUENCE) but ODB-1200 still
-        # recurred for this design with `-sequence unbuffer,sizeup,swap,
-        # buffer,clone` — InsertBufferBeforeLoads is reached via another
-        # move here. Per the documented escalation (split_load-drop first,
-        # full skip only if that doesn't clear it), fall back to skipping
-        # the CTS repair pass entirely; route still does its own
-        # hold-repair so this is safe.
-        "SKIP_CTS_REPAIR_TIMING": "1",
-        # ODB-0445 at post-GRT repair_timing once CORE_UTILIZATION was
-        # raised 55→65 (denser place exposed a different repair path).
-        # "No undo_updateField support for type dbTechNonDefaultRule" —
-        # the resizer's undo mechanism can't handle NDR rule changes
-        # made during repair. Same workaround family as snitch_cluster /
-        # litedram: skip the post-GRT incremental repair; detailed-route
-        # hold-repair still runs.
-        "SKIP_INCREMENTAL_REPAIR": "1",
+        # SKIP_CTS_REPAIR_TIMING (ODB-1200) and SKIP_INCREMENTAL_REPAIR
+        # (ODB-0445) removed on the bazel-orfs 553c1c3 / OpenROAD 299f3015
+        # upgrade — the OpenSTA resizer rewrite fixes ODB-1200
+        # (InsertBufferBeforeLoads) and the ODB-0445 dbTechNonDefaultRule
+        # undo path; full repair_timing runs again.
     },
 )
