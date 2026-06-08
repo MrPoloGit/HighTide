@@ -54,7 +54,7 @@ Network-on-chip with std-cell-only logic; the only physical-design knobs are clo
 
 ### Decisions
 - **2026-04-29 `ec7be591`**: gave the same treatment as the working platforms (io.tcl + 20 ns clock) but synthesis still doesn't reach `_final` on sky130hd.  Stops at `1_synth` per `tools/summary.sh` "Incomplete builds" output.
-- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: **now reaches `6_final`** on the new tools (no config change) — the old-tools synth stall is gone. `6_final.odb` produced; gallery/report regeneration pending (the first run's report step was interrupted). QoR to be recorded once the gallery is re-rendered.
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: big step forward — the old-tools synth stall is gone and the flow runs all the way to `6_final.odb`. **But the final report fails PSM-0069**: `Check connectivity failed on VSS` — many TAP/FILLER/stdcell `VGND` pins are left unconnected by the default sky130hd PDN under the new tools (PSM-0039 warnings precede it). So it produces a routed DB but not a clean signoff. **Flagged** — needs a PDN fix (followpin/strap coverage of VSS, likely a `pdn.tcl`) to close PSM; out of scope for the flow-knob upgrade. asap7 + nangate45 floonoc pass clean.
 
 ### Known issues / open questions
 - Synthesis itself is failing on sky130hd; need to inspect the yosys log to determine whether it's a memory-inference issue, a slang-frontend incompatibility, or something else.
