@@ -245,9 +245,14 @@ the cost of a proper clock + repair vs the prior skew-broken state); both ODB-12
 workarounds (`SETUP_MOVE_SEQUENCE`, `SKIP_INCREMENTAL_REPAIR`) **removed** — the resizer bug
 is fixed. **nangate45**: both removed, reaches `_final` (its WNS is still dominated by the
 pre-existing forwarded-clock SDC quirk — Fmax≈0, unchanged from baseline; not a regression).
-**sky130hd**: `SKIP_INCREMENTAL_REPAIR` had never been set; removing `SETUP_MOVE_SEQUENCE`
-made post-GRT `repair_timing` spin non-convergent (~15 h CPU at GRT), so `SETUP_MOVE_SEQUENCE`
-(split_load-drop) is **kept** — for convergence now, not the (fixed) ODB-1200 crash.
+**sky130hd**: **flagged — does not route on the new tools.** It is the hardest of the three
+ports (1000×1000 `pcie_us` + 20 large FakeRAMs on sky130's coarse pitch). The new OpenROAD
+299f3015 global router cannot resolve its congestion: at util 30 GRT loops its 30 congestion
+iterations indefinitely (~23 h CPU, no convergence); dropping util 30→24 instead hard-fails
+with **GRT-0116** after the iteration budget. `SETUP_MOVE_SEQUENCE` (split_load-drop) +
+`SKIP_INCREMENTAL_REPAIR` are kept but the blocker is GRT routability, not repair. Recovering
+this needs dedicated congestion work (macro re-floorplan, routing-layer adjustment, or a
+larger die) beyond the upgrade's flow-knob scope. asap7 + nangate45 litepci both pass.
 
 ## Bug workarounds in the real-FakeRAM build
 
