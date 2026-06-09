@@ -44,6 +44,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_e1_routadj",
+    top = "cnn",
     platform = "asap7",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -66,6 +67,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_e2_loose",
+    top = "cnn",
     platform = "asap7",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -87,6 +89,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_e3_repair",
+    top = "cnn",
     platform = "asap7",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -107,6 +110,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_e4_repair_loose",
+    top = "cnn",
     platform = "asap7",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -126,6 +130,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_e5_tight_repair",
+    top = "cnn",
     platform = "asap7",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {

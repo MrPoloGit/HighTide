@@ -62,6 +62,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_s1_bigdie",
+    top = "cnn",
     platform = "sky130hd",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -81,6 +82,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_s2_spread",
+    top = "cnn",
     platform = "sky130hd",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -101,6 +103,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_s3_routadj",
+    top = "cnn",
     platform = "sky130hd",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
@@ -121,6 +124,7 @@ hightide_design(
 
 hightide_design(
     name = "cnn_s4_bigdie_spread",
+    top = "cnn",
     platform = "sky130hd",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
