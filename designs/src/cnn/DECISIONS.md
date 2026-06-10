@@ -46,11 +46,12 @@ nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
 
 ## nangate45
 
-**Status**: reaches `_final` on bazel-orfs 553c1c3 (flagged setup regression).
+**Status**: **fixed on bazel-orfs 553c1c3 via the k8s param sweep** (bigger die).
 
 Fixed `DIE_AREA = 0 0 4502 4277` (auto-sizing didn't leave enough room for the 4 large macros). All 367 IO pins force-placed onto the bottom edge with `PLACE_PINS_ARGS` to avoid clustering and shorten routes to the stdcell band below the four `w16_l32768` macros at the top of the die. Default RTLMP for macro placement.
 
-- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: reaches `_final`, but the new RTLMP places cnn's 65 macros worse, lengthening the SRAM critical paths — WNS **−362 → −3113 ps**, Fmax 0.35 → 0.18 GHz (−49 %), 198 407 cells (+7 %). No workarounds here (the old hand-placement `MACRO_PLACEMENT_TCL` was dropped in favour of RTLMP), so this is not removable; a re-introduced hand-placement would be the fix but is out of scope for the upgrade. **Flagged QoR regression.**
+- **2026-06-04 toolchain upgrade**: at the old 4502×4277 µm die the new RTLMP packed cnn's 65 macros too tightly, lengthening the SRAM paths — WNS −362 → −3113 ps, Fmax 0.35 → 0.18 GHz (−49 %).
+- **2026-06-10 — k8s param sweep**: same fix as sky130 — **give RTLMP more room**. A 4-variant die sweep found **`DIE_AREA = 0 0 7000 7000`, `PLACE_DENSITY = 0.45`, `MACRO_PLACE_HALO = 50 50`** recovers it: **WNS −60 ps** (≈ closed, vs the −362 ps baseline) at **Fmax 0.39 GHz** (better than the 0.35 baseline), util 19 %. Smaller dies were progressively worse (6×6 → −1571 ps), so the 7×7 die is the sweet spot. **Recovered.**
 
 ## sky130hd
 
