@@ -32,3 +32,90 @@ hightide_design(
         "PLACE_PINS_ARGS": "-exclude top:* -exclude left:* -exclude right:* -min_distance 4 -min_distance_in_tracks",
     },
 )
+
+
+# --- k8s cnn-n45 param-sweep experiments (temporary; remove after sweep) ---
+
+hightide_design(
+    name = "cnn_n1",
+    top = "cnn",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 6000 6000",
+        "CORE_AREA": "2 2 5998 5998",
+        "PLACE_DENSITY": "0.50",
+        "MACRO_PLACE_HALO": "40 40",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "PLACE_PINS_ARGS": "-exclude top:* -exclude left:* -exclude right:* -min_distance 4 -min_distance_in_tracks",
+    },
+)
+
+hightide_design(
+    name = "cnn_n2",
+    top = "cnn",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 5500 5500",
+        "CORE_AREA": "2 2 5498 5498",
+        "PLACE_DENSITY": "0.55",
+        "MACRO_PLACE_HALO": "30 30",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "PLACE_PINS_ARGS": "-exclude top:* -exclude left:* -exclude right:* -min_distance 4 -min_distance_in_tracks",
+    },
+)
+
+hightide_design(
+    name = "cnn_n3",
+    top = "cnn",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 4502 4277",
+        "CORE_AREA": "2 2 4500 4275",
+        "PLACE_DENSITY": "0.50",
+        "MACRO_PLACE_HALO": "40 40",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "PLACE_PINS_ARGS": "-exclude top:* -exclude left:* -exclude right:* -min_distance 4 -min_distance_in_tracks",
+    },
+)
+
+hightide_design(
+    name = "cnn_n4",
+    top = "cnn",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 7000 7000",
+        "CORE_AREA": "2 2 6998 6998",
+        "PLACE_DENSITY": "0.45",
+        "MACRO_PLACE_HALO": "50 50",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "PLACE_PINS_ARGS": "-exclude top:* -exclude left:* -exclude right:* -min_distance 4 -min_distance_in_tracks",
+    },
+)
