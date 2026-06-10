@@ -50,9 +50,12 @@ reaches `_final` today; nangate45 / sky130hd are not yet closing and are out of 
 
 - **2026-06-04**: closes timing — WNS +661 → +626 ps, util 35.7 %. But yosys 0.64's slang
   frontend grows the netlist on this design's FF-fallback memories: **123 554 → 154 070
-  logic cells (+24.7 %)**. `ABC_AREA=1` was tried as a synth flow knob and made it *worse*
-  (211 910 cells), so it was reverted. The growth is inherent to the new front-/mid-end on
-  this design; not recoverable without RTL changes. Accepted as a flagged QoR regression.
+  logic cells (+24.7 %)**. multiple levers were tried — `ABC_AREA=1` (worse, +71%), `set_max_fanout` 32→64 (−0.1%, comb count
+  identical → not SDC/fanout-driven), and `SYNTH_HIERARCHICAL=1` were all tried — none recover
+  it; the growth is purely yosys-0.64 ABC combinational tech-mapping for the nangate45/sky130
+  cell libraries (asap7's mapping is unaffected). The SDC is consistent across the regression
+  (same constraints produced the leaner old-tools baseline). **Accepted/backed off**: area-only,
+  designs still close (n45 +626 ps) / route (sky −172 ps).
 
 ## sky130hd
 
