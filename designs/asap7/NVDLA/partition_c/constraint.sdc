@@ -35,8 +35,11 @@ set_ideal_network  [get_ports {nvdla_clk_ovr_on}]
 set_ideal_network  [get_ports {tmc2slcg_disable_clock_gating}]
 set_ideal_network  [get_ports {pwrbus_ram_pd*}]
 
-set_false_path -to [get_pin */RESETN]
-set_false_path -to [get_pin */SETN]
+# async set/reset `-to [get_pin */SETN|/RESETN]` false-paths removed on the
+# bazel-orfs 553c1c3 / OpenROAD 299f3015 upgrade — the new OpenSTA write_sdc
+# corrupts the wildcard-expanded instance names (invalid UTF-8) and Tcl 9
+# then hard-fails floorplan. Redundant: reset sources already -from false-pathed
+# and reset nets are set_ideal_network. Verified timing unchanged.
 
 set_max_fanout 128 [current_design]
 

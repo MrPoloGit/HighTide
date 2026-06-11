@@ -42,7 +42,7 @@ Note: `hightide_design()` exposes the per-stage `orfs_flow` targets (`_synth` �
 
 ### Key Relationships
 
-- **`MODULE.bazel`** — Declares dependencies on `bazel-orfs` (via `git_override`) and configures the ORFS Docker image for tool extraction
+- **`MODULE.bazel`** — Mirrors `bazel-orfs`'s root-only overrides (it pins ORFS/OpenROAD via `archive_override` tarballs, builds OpenROAD from source, yosys `0.64`, sv-lang/scip/sed/boost.unordered `single_version_override`s) and adds HighTide's yosys-slang plugin. Keep in sync with `bazel-orfs/MODULE.bazel` at the pinned submodule commit when bumping (see the `upgrade-tools` skill). `.bazelrc` carries `--@openroad//:platform=gui` (needed by the `_gallery` render)
 - **`defs.bzl`** — `hightide_design()` macro wrapping `orfs_flow()` with common defaults (`GDS_ALLOW_EMPTY`, platform-to-PDK mapping)
 - **`BUILD.bazel`** (root) — Defines `//:update_rtl` config setting and the `merge_yosys_share` target that bundles the yosys-slang plugin
 - Each design has a `BUILD.bazel` calling `hightide_design()` with its parameters (utilization, density, SRAMs, etc.)
@@ -79,20 +79,14 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 
 Per-design close history, knobs, QoR, and known issues live in **`designs/src/<design>/DECISIONS.md`**, with one `## <platform>` section per technology. Update there, not here — this index just tracks which (design, platform) pairs are reaching `_final`.
 
-Reaching `_final` (cached on remote build cache):
-- **asap7**: coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth, NVDLA partitions a/m/o, NyuziProcessor
-- **nangate45**: coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth
-- **sky130hd**: gemmini, lfsr, litedram, minimax, sha3, liteeth, NVDLA partitions a/m/o/p
+**The authoritative "which pairs finish" list is the `webpage` worktree's `results.html`** (one QoR row per finishing pair), not this index — the lists below had drifted stale (they understated coverage; e.g. eyeriss/floonoc/litepci/snitch_cluster/ternip/partition_p all finish). As of the 2026-06 toolchain upgrade the suite has **59 finishing (platform, design) pairs**.
 
-Reaching `_final` locally only (over the Cloudflare-tunnel 100 MB cache-upload ceiling — see the local-build list below):
-- **asap7**: NVDLA partition_c
-- **nangate45**: cnn, NVDLA partition_c
-- **sky130hd**: cnn, bp_uno
+Reaching `_final` on the **2026-06 upgraded tools** (bazel-orfs `553c1c3`), validated clean (QoR within ~5 % of the pre-upgrade `results.html` baseline):
+- lfsr, minimax, sha3, ternip (all 3 platforms); coralnpu, liteeth, gemmini, litedram (all 3); NyuziProcessor (asap7/nangate45); floonoc (asap7/nangate45); eyeriss (all 3); litepci (asap7/nangate45); **all NVDLA partitions a/m/o/p (asap7/sky130hd), a/c/m/o/p (nangate45), partition_c (asap7)**; vortex-asap7.
 
-Not yet finishing:
-- **asap7**: floonoc, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partition_p
-- **nangate45**: bp_processor (bp_uno, bp_quad)
-- **sky130hd**: NVDLA partition_c (global-placement plateau — see `designs/src/NVDLA/DECISIONS.md`)
+Reaching `_final` but with a **flagged QoR regression** the upgrade introduced (not flow-knob recoverable without RTL/SDC — see each DECISIONS.md): vortex-nangate45/sky130hd (yosys-0.64 FF-fallback cell growth +25–28 %), cnn-nangate45 (new-RTLMP macro placement, Fmax −49 %), coralnpu-sky130hd / vortex-sky130hd (marginal setup), litepci-nangate45 (pre-existing unconstrained forwarded clock).
+
+In progress / not yet re-validated on the upgraded tools at last checkpoint: cnn-asap7/sky130hd, bp_uno (all 3), snitch_cluster (asap7/nangate45), litepci-sky130hd (GRT-congestion retune), floonoc-sky130hd (reaches `6_final` but PSM-0069 VSS power-grid check fails the report). sky130hd NVDLA partition_c still does not finish (GP plateau).
 
 Use `tools/fetch_cache.sh` to pull cached `_final` results from the remote cache; designs in the local-only / not-finishing lists above aren't on it.
 
@@ -135,8 +129,11 @@ Use the per-class fields in `6_report.json` (e.g. `class:sequential_cell`, `clas
 
 Designs in this repo carry workarounds for upstream tool bugs. Update this table whenever a new workaround lands, and remove rows once the upstream bug is fixed and the workaround can be reverted.
 
+> **2026-06 toolchain upgrade (bazel-orfs `553c1c3` / OpenROAD `299f3015` / OpenSTA `8575070` / yosys `0.64`).** The following bugs are **fixed upstream** and their workarounds were removed where QoR allowed (see per-design DECISIONS.md): **CTS-0122** (in the pin — local patch dropped), **CTS-0105** ([#10177], removed on NyuziProcessor), **ODB-1200 / RSZ-0074** (resizer rewrite — removed on liteeth n45/sky, gemmini, litedram-asap7, NyuziProcessor, eyeriss, litepci a7/n45), **ODB-0445** (removed on NyuziProcessor). A few designs **keep** an ODB-1200-family skip not for the (fixed) crash but because the new resizer's `repair_timing` **does not converge** on them (litepci-sky: ~23 h GRT spin → `SKIP_INCREMENTAL_REPAIR`; asap7 liteeth/eyeriss kept for QoR). New issues introduced by the upgrade: the **OpenSTA `write_sdc` UTF-8 corruption** row below (NVDLA partition_m/c), and **MPL-0040 recurs** under the new RTLMP (eyeriss-asap7, fixed via util 40→30). Genuine, non-workaround QoR regressions from the new synth/place: vortex-n45/sky cell growth (+25–28 %), cnn macro-placement (Fmax −49 %) — flagged in their DECISIONS.md.
+
 | Bug | Affected designs | Workaround | First commit | Issue |
 |-----|------------------|------------|--------------|-------|
+| **OpenSTA `write_sdc` instance-name corruption** (new in OpenROAD 299f3015) — expanding a wildcard `set_false_path -to [get_pin */SETN]` / `*/RESETN` writes corrupted (invalid-UTF-8) instance names into `1_synth.sdc`; Tcl 9's strict UTF-8 then hard-fails floorplan reading it (`error reading "fileN": invalid or incomplete multibyte`) | NVDLA `partition_m` (asap7/sky130hd), `partition_c` (asap7/nangate45) | Remove the two redundant `-to [get_pin */SETN\|/RESETN]` async-reset false-paths from `constraint.sdc` (reset sources are already `-from` false-pathed and the reset nets are `set_ideal_network`, so no real timed path is lost) | (this PR) | None filed yet |
 | **bsg_fakeram `wd_in` LEF direction** — `generate_lef.py` set pin `DIRECTION` by physical die side, not function, so the upper half of every write-data bus was `OUTPUT` in LEF while Liberty said `input`; OpenROAD PnR shorted half of each `wd_in` bus → unroutable GRT-0116 (cnn-sky130hd net: 1964 iterms / 512 bogus drivers) | every fakeram design's pre-`c83ecb4` LEF (Section A + B); all prior `_final` passes invalid | Fork fix `c83ecb4` (submodule bumped `044c02b9`); regenerate all macros via `tools/regenerate_sram.sh` / `tools/reconstruct_cfg_from_lef.py`; vortex's 6 unsizable macros → FF-fallback | `c83ecb4` / `044c02b9` | Pre-existing in fork since `0e1b3c00` (Oct 2025); fixed in VLSIDA/bsg_fakeram |
 | **CTS-0105** false skip — yosys hierarchical synthesis output port buffers arrive in ODB with `dbSourceType::TIMING` instead of `NETLIST`; CTS skips them as pre-existing clock buffers and leaves the clock net unbuffered | asap7 NyuziProcessor; asap7/nangate45/sky130hd `bp_quad`, `bp_uno` | `PRE_CTS_TCL` script resets affected buffers' `dbSourceType` from `TIMING` → `NETLIST` before CTS runs | `81b0ed4b` | [OpenROAD#10177](https://github.com/The-OpenROAD-Project/OpenROAD/issues/10177) |
 | **MPL-0040** — `rtl_macro_placer` annealing failure on certain macro clusters | asap7 `bp_quad` (pipe_fma cluster), asap7 `cnn` | Hand-place fakeram macros in left-edge columns at FIRM status via `macros.tcl` so RTLMP only sees pre-placed macros; for cnn also drop `CORE_UTILIZATION` 65→60 | `09542e19` | [OpenROAD#9985](https://github.com/The-OpenROAD-Project/OpenROAD/issues/9985) |
@@ -146,7 +143,7 @@ Designs in this repo carry workarounds for upstream tool bugs. Update this table
 | **`repair_timing` non-convergence** — repair loop spends iterations on the same RTL-bounded endpoint without making progress. Not a bug per se, but a flow pathology when the clock target is too tight for the design | asap7 `snitch_cluster`, asap7 `litedram` | `SKIP_INCREMENTAL_REPAIR = 1` to skip post-GRT `repair_timing` | `39ca8670` | None |
 | **ODB-0445** in post-GRT `repair_timing` — `[CRITICAL ODB-0445] No undo_updateField support for type dbTechNonDefaultRule`. The resizer's `Journal::undo` can't unroll changes to `dbTechNonDefaultRule` made during repair; crash trips during the slack-spiral retry on a single endpoint. Surfaces in dense placements that need NDR-using moves | asap7 `NyuziProcessor` (post util 55→65 PPA push) | `SKIP_INCREMENTAL_REPAIR = 1` — same workaround family as `repair_timing` non-convergence; detailed-route hold-repair still runs | (this PR) | None (no upstream issue filed yet) |
 | **LiteX GENSDRPHY `input sdram_dq`** — `litedram/gen.py` declares the bidirectional SDR DQ bus as a plain `input` port (Lattice-platform convention; the tristate buffer lives at the IOB), but the same module instantiates 16 `TRELLIS_IO` cells that internally drive the port via OE-gated logic. yosys' `check -assert -mapped` sees the conflict and aborts synth on all 3 platforms | asap7/nangate45/sky130hd `litedram` | Patch `litedram_core.v` to make `sdram_dq` an `inout` port (`patch/litedram_core.patch`). Combined with `SYNTH_HIERARCHICAL = 1` so abc keeps each `TRELLIS_IO` as a hierarchy boundary | (this PR) | None (LiteX `gen.py:870` carries a `# FIXME: Allow other Vendors.` note) |
-| **CTS-0122** false skip — `dbNet::getFirstOutput()` unconditionally skipped iterms whose MTerm `SigType` is `CLOCK`, dropping the actual driver of any clock net sourced by a `clock: true`-tagged macro output (PCIe hard-IP `user_clk`, PLL clock-out, …). TritonCTS then emits CTS-0122 and skips building a tree; the whole clock domain ends up distributed by naked place/route wire delay (~9 ns skew, thousands of unfixable hold violations on litepci `sys_clk`) | sky130hd/nangate45/asap7 `litepci` | Local OpenROAD source patch via `MODULE.bazel` git_override `patches=[...]` (`patches/openroad-cts-0122-fix.patch`) — deletes the redundant `isClocked()` skip in `src/odb/src/db/dbNet.cpp`. Remove the patch entry and the file once `bazel-orfs` bumps the OpenROAD pin past merge commit `cd4f5041` | (this PR) | [OpenROAD#10549](https://github.com/The-OpenROAD-Project/OpenROAD/pull/10549) (merged `cd4f5041`) |
+| ~~**CTS-0122** false skip~~ **RESOLVED 2026-06** — `dbNet::getFirstOutput()` skipped the driver of clock nets sourced by a `clock: true` macro output. Fixed upstream ([#10549], `cd4f5041`); the OpenROAD `299f3015` pin is past it, so the local `patches/openroad-cts-0122-fix.patch` was **dropped**. litepci-asap7 went from WNS −883 ps (broken clock tree) to +944 ps. | sky130hd/nangate45/asap7 `litepci` | (removed — fix in pin) | (this PR) | [OpenROAD#10549](https://github.com/The-OpenROAD-Project/OpenROAD/pull/10549) (merged `cd4f5041`) |
 
 ### Useful ORFS env vars for these workarounds
 

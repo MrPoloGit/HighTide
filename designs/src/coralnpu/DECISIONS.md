@@ -22,6 +22,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ### Decisions
 - **2026-04-26 `643ba623`**: initial close.  Halo 6×6 chosen to keep std cells out of macro shadow but avoid wasting die area.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean: WNS +123 ps on the 3000 ps clock, util 40.5%, 156858 logic cells, 2 macros. No change needed.
 
 ### Known issues / open questions
 - None.
@@ -39,6 +40,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ### Decisions
 - **2026-04-26 `643ba623`**: halo bumped to 40×40 (vs asap7's 6×6) — same number of stdcell tracks of macro clearance, just expressed in micrometers at nangate45's pitch.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean: WNS +998 ps on the 9 ns clock, util 40.3%, 140663 logic cells, 2 macros. No change needed.
 
 ### Known issues / open questions
 - None.
@@ -56,6 +58,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ### Decisions
 - **2026-04-26 `6d6f2dc2`**: util dropped to 20%, density set explicitly to 0.15 to relieve sky130hd routing congestion on this macro-heavy NPU.
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: reaches `_final`; 148 566 logic cells (−1.2 % vs baseline 150 363), util 23.1 %. Reported WNS +507 → −269 ps on the 30 ns clock — that is −0.9 % of the clock period (achievable Fmax change ~2.3 %, within tolerance) and the worst path is a **reset-removal check** (`csr/resetReg → mcycle[59]`), not a functional setup path. Accepted as-is; no SDC/RTL change (recovering it would require a reset-removal false-path = constraint change).
 
 ### Known issues / open questions
-- None.
+- Reported WNS marginally negative (−269 ps, a reset-removal check ≈ −0.9 % of period) after the 2026-06 upgrade; design routes and reaches 6_final with area unchanged.

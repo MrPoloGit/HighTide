@@ -53,6 +53,7 @@ FakeRAM macros live at `designs/<platform>/NyuziProcessor/sram/{lef,lib}/` and a
   - **SDC 3800 → 3000 ps**: looser 3800 ps targets left synth/repair_timing under-motivated; tightening pushed both to pick faster cells and to optimize the wire-bound L2-cache critical path (`sram_l2_data → l2_response[307]`) harder.
 
 - **2026-05-27** — at util 65 the denser placement exposed **ODB-0445** in post-GRT `repair_timing` (`[CRITICAL] No undo_updateField support for type dbTechNonDefaultRule`). The resizer's `Journal::undo` can't unroll changes to non-default routing rules made during repair, so the slack-spiral retry on a single endpoint crashes out. Same workaround family as snitch_cluster/litedram: `SKIP_INCREMENTAL_REPAIR = 1`. Detailed-route hold-repair still runs and DRC stays clean. Documented in CLAUDE.md's bug-workaround table.
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)** — removed **all three** workarounds: `PRE_CTS_TCL` (CTS-0105 #10177, fixed), `SKIP_CTS_REPAIR_TIMING` (ODB-1200, fixed), `SKIP_INCREMENTAL_REPAIR` (ODB-0445, fixed). CTS and full post-GRT `repair_timing` now run without skip or crash, and timing actually improves — reported WNS +417 ps (vs the prior −653 ps SDC-tightness artifact), util 65.7 %, 370 761 logic cells, 55 macros. `pre_cts.tcl` deleted.
 
 ### Reported WNS vs achievable Fmax
 
@@ -82,4 +83,4 @@ The flow reports WNS = −653 ps at the 3000 ps target. That's not a real timing
 
 ### Known issues / open questions
 
-- None active. Same CTS-0105 workaround applies (yosys-hierarchical port-buffer ODB metadata).
+- None active. **2026-06-04 toolchain upgrade**: removed the `PRE_CTS_TCL` CTS-0105 workaround (fixed upstream, #10177). Closes clean — WNS +68.8 ps, util 57.6 %, 377 350 logic cells (≈ baseline 386 497). `pre_cts.tcl` deleted.

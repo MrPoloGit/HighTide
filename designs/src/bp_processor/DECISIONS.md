@@ -74,3 +74,16 @@ python3 tools/gen_macro_grid.py \
 | Core utilization | 18.6 % |
 
 `6_final.odb` is ~2.9 GB — far past the Cloudflare-tunnel 100 MB ceiling, so the remote cache reports `NOT CACHED`. Build locally to populate `~/.cache/bazel-disk-cache`; the local-build list in CLAUDE.md tracks this.
+
+## 2026-06 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64) — bp_uno
+
+- **nangate45**: clean pass, no change — WNS +1963 → **+1943 ps**, util 15.9 %, 439 607 logic
+  cells (≈ baseline 439 722), Fmax 0.19 → 0.20 GHz. Workarounds kept.
+- **asap7**: **flagged regression.** WNS +78 → −459 ps (Fmax 0.31 → 0.26, −16 %), 452 k cells
+  (−2 %). Re-enabling repair (removing `SKIP_INCREMENTAL_REPAIR`) was tried and converged
+  without the old hang, but gave the same −467 ps — the slowdown is netlist/placement-bound
+  on the new RTLMP/router, not repair-fixable (same class as cnn-asap7). Original config
+  (skip kept) restored; not recoverable via flow knobs without RTL/SDC changes.
+- **sky130hd**: clean pass on the new tools — WNS **+4.14 ns** (≈ the +4.4 ns baseline), util
+  18.6 %, 367 437 logic cells, 140 macros. 7.6 M-cell-class / local-only (over the Cloudflare
+  ceiling); built + cached locally. Workarounds (MACRO_PLACEMENT_TCL hand-grid, repair skip) kept.

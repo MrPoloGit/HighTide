@@ -38,19 +38,25 @@ nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
 
 ## asap7
 
-**Status**: finishing.
+**Status**: reaches `_final` on bazel-orfs 553c1c3 via the k8s param sweep; **WNS still flagged-negative.**
 
 `hightide_design()` with `CORE_UTILIZATION=60`, `PLACE_DENSITY=0.40`. Default RTLMP places the four `fakeram_w16_l32768` macros. **MPL-0040** workaround required — see CLAUDE.md bug table: `macros.tcl` pre-places the fakeram macros (FIRM) before RTLMP runs.
 
+- **2026-06-09 toolchain upgrade — k8s parameter sweep**: the original config (util 60, repair skipped) GRT-*hangs* on the new tools; util 50 routes but with a buffer explosion (WNS −9088 ps, 436 k cells). A 5-variant k8s sweep (util × density × halo × routing-adjustment × repair-on) found the best config: **`CORE_UTILIZATION=45`, `PLACE_DENSITY=0.50`, `MACRO_PLACE_HALO=12 12`, repair ON** (the ODB-1200 `SKIP_*_REPAIR` removed — the new resizer converges). This **reaches `_final` at WNS −3502 ps** (vs −9088 / hang), util 45.5 %, ~240 k cells. Still negative vs the +122 ps baseline — the new RTLMP/router slow this 65-macro design's SRAM paths and no flow-knob combo recovered it fully — so it builds but is a **flagged QoR regression**. Sweep ranking: util45-repair −3502 > util55-repair −3790 > util60-repair −4585 > util50-skips −5208.
+- **2026-06-11 — explicit-die sweep (a1/a2/a3), inconclusive → e4 retained**: unlike nangate45/sky130 (where a bigger `DIE_AREA` cured an RTLMP-packing / GRT-congestion regression), asap7's regression is buffer/SRAM-path bound, not congestion. Three explicit-die variants (`DIE_AREA` 2400/2800/3200 µm², density 0.45/0.40/0.35, halo 20/30/40, repair-ON) were run on k8s. All three **routed** (each reached `5_2_route` / `6_final.odb`), confirming routability isn't the limiter — but none produced a clean, attributable final WNS: the k8s variants share `top="cnn"` so they collide on the same artifact-PVC path, and every variant's job died at the post-route **gallery GUI render** (`Db save failed` under xvfb), which then triggered a full 24 h flow retry. The sweep yielded no evidence the bigger die beats e4's −3502 ps, so the variant targets were removed and the committed **e4 config is the final answer** (finishes, flagged-negative; deeper recovery needs an RTL pipeline or looser clock, both out of scope). Final run done locally to populate the disk cache.
+
 ## nangate45
 
-**Status**: finishing (2026-05-16).
+**Status**: **fixed on bazel-orfs 553c1c3 via the k8s param sweep** (bigger die).
 
 Fixed `DIE_AREA = 0 0 4502 4277` (auto-sizing didn't leave enough room for the 4 large macros). All 367 IO pins force-placed onto the bottom edge with `PLACE_PINS_ARGS` to avoid clustering and shorten routes to the stdcell band below the four `w16_l32768` macros at the top of the die. Default RTLMP for macro placement.
 
+- **2026-06-04 toolchain upgrade**: at the old 4502×4277 µm die the new RTLMP packed cnn's 65 macros too tightly, lengthening the SRAM paths — WNS −362 → −3113 ps, Fmax 0.35 → 0.18 GHz (−49 %).
+- **2026-06-10 — k8s param sweep**: same fix as sky130 — **give RTLMP more room**. A 4-variant die sweep found **`DIE_AREA = 0 0 7000 7000`, `PLACE_DENSITY = 0.45`, `MACRO_PLACE_HALO = 50 50`** recovers it: **WNS −60 ps** (≈ closed, vs the −362 ps baseline) at **Fmax 0.39 GHz** (better than the 0.35 baseline), util 19 %. Smaller dies were progressively worse (6×6 → −1571 ps), so the 7×7 die is the sweet spot. **Recovered.**
+
 ## sky130hd
 
-**Status**: finishing (2026-05-16, with R4 banks experiment 2026-05-20).
+**Status**: **fixed on bazel-orfs 553c1c3 via the k8s param sweep.** The 7×7 mm die hard-failed routing (GRT-0116 / GRT-0183) on the new global router. The sweep found that a **larger die fixes it**: `DIE_AREA = 0 0 8000 8000`, `PLACE_DENSITY = 0.35`, `MACRO_PLACE_HALO = 80 80` routes clean to `_final` at **WNS +770 ps**, util 44 %. (A 9×9 mm variant also passed; 8×8 is the smaller of the two. Halo 100 on the 7×7 die instead hit MPL-0004 — cluster too big; routing-adjustment alone on the 7×7 die failed GRT-0183.)
 
 This was the hardest port — full RTL→GDS only landed after a stack of three independent fixes:
 
