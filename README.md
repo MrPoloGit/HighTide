@@ -77,9 +77,12 @@ tools/bazel_to_config_mk.sh --abs designs/asap7/lfsr /tmp/lfsr.config.mk
 make -C OpenROAD-flow-scripts/flow DESIGN_CONFIG=/tmp/lfsr.config.mk
 ```
 
-The script builds the design through `bazel-orfs` (cached after the
-first run), then unions the per-stage `*.short.mk` files Bazel writes
-and strips Bazel-internal vars.
+This costs no synthesis or place-and-route: it builds only each stage's
+`<stage>.mk` config output group (cheap bazel *analysis*, seconds), unions
+the `export VAR?=VALUE` lines, strips Bazel-internal vars, and adds the
+cquery-resolved `VERILOG_FILES`. (`run_orfs.sh`'s default reuse-synth mode
+additionally builds just the `_synth` stage to get the netlist; `--resynth`
+re-synthesizes in your ORFS install and needs no bazel flow build at all.)
 
 ### Alternative: a custom OpenROAD inside bazel-orfs (binary swap only)
 

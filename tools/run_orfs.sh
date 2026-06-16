@@ -159,15 +159,16 @@ if [ -z "$config" ]; then
     config="$work_dir/config.mk"
     echo ">> Extracting config.mk -> $config" >&2
     tools/bazel_to_config_mk.sh --abs "$pkg" "$config"
-elif [ "$no_build" = 0 ] && [ "$resynth" = 0 ]; then
-    echo ">> Building all stages of //$pkg (for the synth netlist) ..." >&2
-    stage_targets=()
-    for s in synth floorplan place cts grt route final; do
-        stage_targets+=("//$pkg:${name}_$s")
-    done
-    bazel build "${stage_targets[@]}" >&2
 fi
 config=$(realpath "$config")
+
+# Reuse mode needs the bazel-synthesized netlist (config extraction above is
+# config-only and does NOT build it). Build just the synth stage — not the
+# whole flow. --resynth re-synthesizes in plain ORFS, so it needs nothing.
+if [ "$resynth" = 0 ] && [ "$no_build" = 0 ]; then
+    echo ">> Building synth netlist //$pkg:${name}_synth ..." >&2
+    bazel build "//$pkg:${name}_synth" >&2
+fi
 
 # --- Resolve OpenROAD (+ matching sta) ------------------------------------
 # Override OPENROAD_EXE/OPENSTA_EXE only when the tools wouldn't otherwise
