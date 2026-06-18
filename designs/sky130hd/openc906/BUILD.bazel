@@ -1,0 +1,29 @@
+load("//:defs.bzl", "hightide_design")
+
+# WARNING: C906 has 600+ Kbits of cache SRAM (ICACHE_32K + DCACHE_32K +
+# BHT_16K + JTLB, hardcoded in cpu_cfig.h).  The current build uses
+# behavioral FF stubs — synthesis will complete but P&R is not meaningful
+# until FakeRAM macros are generated via /generate-sram.
+hightide_design(
+    name = "openc906",
+    top = "openC906",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/openc906:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    arguments = {
+        "CORE_UTILIZATION": "40",
+        "CORE_ASPECT_RATIO": "1.0",
+        "CORE_MARGIN": "12",
+        "PLACE_DENSITY": "0.6",
+        "TNS_END_PERCENT": "100",
+        # Force all inferred memories to FF arrays.
+        # With cpu_cfig.h defaults: ICache=32KB, DCache=32KB, BHT=16KB
+        # = ~620 Kbits of SRAM → will synthesize as ~620K flip-flops.
+        # Replace with FakeRAM macros for realistic benchmark.
+        "SYNTH_MEMORY_MAX_BITS": "4194304",
+        "SYNTH_HIERARCHICAL": "1",
+        "ABC_AREA": "1",
+    },
+)

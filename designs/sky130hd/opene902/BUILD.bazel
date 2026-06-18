@@ -1,0 +1,18 @@
+load("//:defs.bzl", "hightide_design")
+
+hightide_design(
+    name = "opene902",
+    top = "openE902",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/opene902:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    arguments = {
+        "CORE_UTILIZATION": "40",
+        "CORE_ASPECT_RATIO": "1.0",
+        "CORE_MARGIN": "12",
+        "PLACE_DENSITY": "0.6",
+        "TNS_END_PERCENT": "100",
+    },
+)

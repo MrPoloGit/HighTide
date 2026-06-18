@@ -59,3 +59,15 @@
 [submodule "designs/src/eyeriss/dev/repo"]
 	path = designs/src/eyeriss/dev/repo
 	url = https://github.com/BoooC/CNN-Accelerator-Based-on-Eyeriss-v2
+[submodule "designs/src/opene902/dev/repo"]
+	path = designs/src/opene902/dev/repo
+	url = https://github.com/XUANTIE-RV/opene902
+[submodule "designs/src/opene906/dev/repo"]
+	path = designs/src/opene906/dev/repo
+	url = https://github.com/XUANTIE-RV/opene906
+[submodule "designs/src/openc906/dev/repo"]
+	path = designs/src/openc906/dev/repo
+	url = https://github.com/XUANTIE-RV/openc906
+[submodule "designs/src/openc910/dev/repo"]
+	path = designs/src/openc910/dev/repo
+	url = https://github.com/XUANTIE-RV/openc910

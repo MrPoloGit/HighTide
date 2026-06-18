@@ -1,0 +1,40 @@
+filegroup(
+    name = "rtl_release",
+    srcs = ["openc910.v"],
+    visibility = ["//visibility:public"],
+)
+
+# update-rtl mode: init submodule and regenerate the merged RTL.
+# Order: 2 header files (defines) → all non-fpga core .v files →
+#        fpga_ram + 41 ct_f_spsram_* FPGA models.
+# No extra stubs: all SRAM sizes active in the default cpu_cfig.h
+# configuration have corresponding ct_f_spsram_* FPGA models.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = [],
+    outs = ["dev_openc910.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/openc910/dev/repo >&2
+        REPO=designs/src/openc910/dev/repo/C910_RTL_FACTORY/gen_rtl
+        {
+          cat $$REPO/cpu/rtl/cpu_cfig.h
+          cat $$REPO/mmu/rtl/sysmap.h
+          find $$REPO -name '*.v' ! -path '*/fpga/*' | sort | xargs cat
+          cat $$REPO/fpga/rtl/fpga_ram.v
+          for f in $$REPO/fpga/rtl/ct_f_spsram_*.v; do cat $$f; done
+        } > $(location dev_openc910.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

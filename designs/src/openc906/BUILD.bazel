@@ -1,0 +1,44 @@
+filegroup(
+    name = "rtl_release",
+    srcs = ["openc906.v"],
+    visibility = ["//visibility:public"],
+)
+
+# update-rtl mode: init submodule and regenerate the merged RTL.
+# Order: 6 header files (defines) → all non-fpga core .v files →
+#        fpga_ram + 8 aq_f_spsram_* FPGA models → 29 aq_spsram_* stubs.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = ["aq_spsram_stubs.v"],
+    outs = ["dev_openc906.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/openc906/dev/repo >&2
+        REPO=designs/src/openc906/dev/repo/C906_RTL_FACTORY/gen_rtl
+        {
+          cat $$REPO/cpu/rtl/cpu_cfig.h
+          cat $$REPO/dtu/rtl/aq_dtu_cfig.h
+          cat $$REPO/idu/rtl/aq_idu_cfig.h
+          cat $$REPO/lsu/rtl/aq_lsu_cfig.h
+          cat $$REPO/mmu/rtl/sysmap.h
+          cat $$REPO/tdt/rtl/top/tdt_define.h
+          cat $$REPO/tdt/rtl/top/tdt_dmi_define.h
+          find $$REPO -name '*.v' ! -path '*/fpga/*' | sort | xargs cat
+          cat $$REPO/fpga/rtl/fpga_ram.v
+          for f in $$REPO/fpga/rtl/aq_f_spsram_*.v; do cat $$f; done
+          cat designs/src/openc906/aq_spsram_stubs.v
+        } > $(location dev_openc906.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

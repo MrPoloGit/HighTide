@@ -1,0 +1,33 @@
+filegroup(
+    name = "rtl_release",
+    srcs = ["opene902.v"],
+    visibility = ["//visibility:public"],
+)
+
+# update-rtl mode: init submodule + concatenate all gen_rtl Verilog files.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = [],
+    outs = ["dev_opene902.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/opene902/dev/repo >&2
+        REPO=designs/src/opene902/dev/repo/E902_RTL_FACTORY/gen_rtl
+        {
+          cat $$REPO/cpu/rtl/cpu_cfig.h
+          find $$REPO -name '*.v' | sort | xargs cat
+        } > $(location dev_opene902.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

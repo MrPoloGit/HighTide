@@ -1,0 +1,45 @@
+filegroup(
+    name = "rtl_release",
+    srcs = ["opene906.v"],
+    visibility = ["//visibility:public"],
+)
+
+# update-rtl mode: init submodule and regenerate the merged RTL.
+# Concatenates: all non-fpga core files + fpga_ram + the 6 pa_f_spsram_* models
+# needed for ICACHE_2K + DCACHE_2K + BHT + pa_spsram_* wrapper stubs.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = ["pa_spsram_stubs.v"],
+    outs = ["dev_opene906.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/opene906/dev/repo >&2
+        REPO=designs/src/opene906/dev/repo/E906_RTL_FACTORY/gen_rtl
+        {
+          cat $$REPO/cpu/rtl/cpu_cfig.h
+          cat $$REPO/dtu/rtl/pa_dtu_cfig.h
+          cat $$REPO/idu/rtl/pa_idu_cfig.h
+          cat $$REPO/sysmap/rtl/sysmap.h
+          cat $$REPO/tdt/rtl/top/tdt_define.h
+          cat $$REPO/tdt/rtl/top/tdt_dmi_define.h
+          find $$REPO -name '*.v' ! -path '*/fpga/*' | sort | xargs cat
+          cat $$REPO/fpga/rtl/fpga_ram.v
+          for size in 256x32 32x47 128x32 32x46 32x4 512x16; do
+            cat $$REPO/fpga/rtl/pa_f_spsram_$${size}.v
+          done
+          cat designs/src/opene906/pa_spsram_stubs.v
+        } > $(location dev_opene906.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

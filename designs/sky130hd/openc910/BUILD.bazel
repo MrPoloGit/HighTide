@@ -1,0 +1,29 @@
+load("//:defs.bzl", "hightide_design")
+
+# WARNING: C910 is a dual-core OOO processor with 64KB I/D cache per core
+# and 1MB L2 (20+ Mbits total SRAM, all in behavioral FPGA models).
+# Synthesis will complete but P&R is not meaningful until FakeRAM macros
+# are generated via /generate-sram.  This is a bp_quad-scale design.
+hightide_design(
+    name = "openc910",
+    top = "openC910",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/openc910:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    arguments = {
+        "CORE_UTILIZATION": "40",
+        "CORE_ASPECT_RATIO": "1.0",
+        "CORE_MARGIN": "12",
+        "PLACE_DENSITY": "0.6",
+        "TNS_END_PERCENT": "100",
+        # All ct_spsram_* behavioral FPGA models are included in the RTL.
+        # With SYNTH_MEMORY_MAX_BITS=inf, yosys will synthesize all memory
+        # arrays as flip-flops — ~20+ Mbit → not meaningful for P&R.
+        # Replace with FakeRAM macros for a realistic benchmark.
+        "SYNTH_MEMORY_MAX_BITS": "268435456",
+        "SYNTH_HIERARCHICAL": "1",
+        "ABC_AREA": "1",
+    },
+)
